@@ -1,7 +1,5 @@
 # aimake configuration.
 
-# There's a maximum combined length on the executable info structure.
-# So this is written concisely, so as to be able to fit everything in.
 # Based off the one used in FIQHack (https://github.com/FredrIQ/fiqhack)
 $copyright = "(c) Fredrik Ljungdahl, 2016";
 
