@@ -13,6 +13,10 @@ $copyright = "(c) Fredrik Ljungdahl, 2016";
         companyname      => 'FIQ',
 
         CFLAGS      => '-Wall -Wextra -fdiagnostics-show-option -O2 -g',
+
+        # suppress libuncursed warnings
+        AM_CFLAGS   => '-Wno-missing-field-initializers '.
+                       '-Wno-sign-compare -Wno-unused-parameter',
         CXXFLAGS    => '-Wall -Wextra -Wmissing-declarations '.
                        '-Wpointer-arith -O2 -g',
     },
