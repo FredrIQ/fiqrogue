@@ -1,0 +1,202 @@
+# aimake configuration.
+
+# There's a maximum combined length on the executable info structure.
+# So this is written concisely, so as to be able to fit everything in.
+$copyright = "(c) Fredrik Ljungdahl, 2016";
+
+{
+    options => {
+        packagename      => 'fiqrogue',
+        packagename_text => 'FIQRogue',
+        packageversion   => '0.1',
+        companyname      => 'FIQ',
+
+        CFLAGS      => '-Wall -Wextra -fdiagnostics-show-option -O2 -g',
+        CXXFLAGS    => '-Wall -Wextra -Wmissing-declarations '.
+                       '-Wpointer-arith -O2 -g',
+    },
+    libraries => {
+        'z'       => 'compress',
+        'png'     => 'png_create_write_struct',
+        'pq'      => 'PQsetdbLogin',
+        'pthread' => 'pthread_create',
+        'SDL2'    => 'SDL_Init',
+        'ws2_32'  => 'connect',
+    },
+    features => {
+        gui => {
+            description => "Tiles and fake terminal ports",
+            long_description => "Installs a GUI executable, that lets you ".
+                                "play with graphical tiles, and play the ".
+                                "text-based version without requiring the ".
+                                "use of a separate terminal emulator.",
+            object => qr=^path:(?:tilesets/dat(?!/text|/catalogues/text)
+                                | tilesets/util/tileset-image.c
+                                | libuncursed/src/plugins/sdl)=x,
+            default => 1,
+        },
+    },
+    rules => {
+        _use_c11 => {
+            object => 'optionset:CFLAGS',
+            depends => ['optionset:c11_option', 'optionset:define_noreturn'],
+        },
+        _xopen_linux => {
+            object => 'optionset:CFLAGS',
+            command => ['intcmd:assert_equal', 'optstring:linux', "optstring:$^O"],
+            depends => 'optstring:-D_XOPEN_SOURCE=700',
+            on_failure => 'conditional'
+        },
+        _xopen_osx => {
+            object => 'optionset:CFLAGS',
+            command => ['intcmd:assert_equal', 'optstring:darwin', "optstring:$^O"],
+            depends => 'optstring:-D_XOPEN_SOURCE=700',
+            on_failure => 'conditional'
+        },
+        _darwin_c_source => {
+            object => 'optionset:CFLAGS',
+            command => ['intcmd:assert_equal', 'optstring:darwin', "optstring:$^O"],
+            depends => 'optstring:-D_DARWIN_C_SOURCE',
+            on_failure => 'conditional'
+        },
+
+        _statically_link_uncursed_plugins => {
+            # Most uncursed plugins are loaded as libraries. However, there's
+            # no reason to do that in the case of terminal-based plugins that
+            # require no external library support of their own (tty and
+            # wincon), so we just link those in directly.
+            object => "bpath:libuncursed/src/libuncursed.c/libuncursed$objext",
+            depends => "optionset:_uncursed_static_plugins",
+        },
+        _uncursed_plugins_have_wrappers => {
+            object => qr=^bpath:libuncursed/src/plugins/
+                         [^/]+\.c/.+\Q$objext\E$=xs,
+            command => ['intcmd:echo', 'optpath::'],
+            depends => ["extend:$objext:extend:/:extend:.cxx:extend:..:",
+                        "optpath::extend:$objext:extend:/:extend:.cxx:extend:..:"],
+            require_match => 1,
+        },
+        _uncursed_plugins_to_link_statically => {
+            object => qr=^bpath:libuncursed/src/plugins/
+                      (?:wincon|tty)\.c/.+\Q$objext\E$=xs,
+            output => 'optionset:_uncursed_static_plugins',
+            object_dependency => 'outdepends',
+            outdepends => 'optpath::'
+        },
+        _uncursed_plugins_to_link_dynamically => {
+            object => qr=^bpath:libuncursed/src/plugins/
+                         (?!wincon\b|tty\b).+\.c/.+\Q$objext\E$=xs,
+            command => ['intcmd:echo', 'optpath::'],
+            output => "symbolset::bpath:libuncursed/src/plugins/libuncursed_",
+            outputarg => qr=^bpath:libuncursed/src/plugins/(.*)\.c=,
+            object_dependency => 'outdepends',
+            outdepends => 'optpath::'
+        },
+
+        _text_catalogue_file_dependencies => {
+            object => qr=^path:tilesets/dat/catalogues/text.*\.txt$=s,
+            command => ["intcmd:cat", "optpath::"],
+            lineskip => 2,
+            depends => ["optpath::path:tilesets/dat/text/",
+                        "path:tilesets/dat/text/"],
+            dependsarg => qr=^(.+)$=s,
+            require_match => 1,
+        },
+        _generate_base_text_tileset => {
+            command => ["bpath:tilesets/util/basecchar.c/basecchar$exeext",
+                        "optpath:-o :bpath:tilesets/dat/text/base.txt"],
+            output_from_optpath => '-o ',
+        },
+        _include_base_text_tileset => {
+            # Hack: merge an extra option into the optpath in order to ensure
+            # that the base tileset comes first.
+            object => qr=^path:tilesets/dat/catalogues/text.*\.txt$=s,
+            depends => ["bpath:tilesets/dat/text/base.txt",
+                        "optpath:-W :bpath:tilesets/dat/text/base.txt"],
+        },
+        _build_fonts => {
+            object => qr=^path:tilesets/dat/fonts/font14\.txt=s,
+            command => ["bpath:tilesets/util/tilecompile.c/tilecompile$exeext",
+                        "optpath:-o :extend:.png:",
+                        "optstring:-z 8 14", "optstring:-b 0 0 0",
+                        "optstring:-t image", "optstring:-u",
+                        "optpath::"],
+            output_from_optpath => '-o ',
+        },
+
+        # libuncursed SDL mode is "enabled" by the binary ending with -sdl.
+        # Thus we add a second symlink from "fiqrogue" to "main" so that if
+        # symlinks are implemented by copying, nothing breaks.
+
+        _sdl_link_preparation => {
+            object => "bpath:fiqrogue/src/main.c/main$exeext",
+            command => ["intcmd:symlink", "optpath::",
+                        "optpath:-o:bpath:nethack/src/main.c/fiqhack$exeext",
+                        "bpath:tilesets/dat/fonts/font14.png"],
+            output_from_optpath => '-o',
+            verb => 'symlinked',
+        },
+        _sdl_link => {
+            object => "bpath:fiqrogue/src/main.c/fiqrogue$exeext",
+            command => ["intcmd:symlink", "optpath::",
+                        "optpath:-o:bpath:fiqrogue/src/main.c/fiqhack-sdl$exeext",
+                        "bpath:tilesets/dat/fonts/font14.png"],
+            output_from_optpath => '-o',
+            verb => 'symlinked',
+        },
+
+        _man_sdl_symlink => {
+            command => ["intcmd:symlink",
+                        "optpath:-o:bpath:doc/fiqrogue-sdl.6",
+                        "optpath::bpath:doc/fiqrogue.6",
+                        "bpath:doc/fiqrogue.6",
+                        "bpath:tilesets/dat/fonts/font14.png"],
+            output_from_optpath => '-o',
+            verb => 'symlinked',
+        },
+
+        install_executables => undef, # we don't want to install most of them
+        install_libraries => undef,
+        _install_game => {
+            object => qr=^bpath:fiqrogue[^/]*\Q$dllext\E$=s,
+            install_dir => 'specificlibdir',
+        },
+        _install_libuncursed => {
+            object => qr=^bpath:libuncursed/src/libuncursed\Q$dllext\E[.\d]*$=s,
+            install_dir => 'libdir',
+        },
+        _install_tty => {
+            object => "bpath:fiqrogue/src/main.c/main$exeext",
+            install_dir => "gamesbindir",
+            install_elevation => "games",
+            install_name => "fiqrogue$exeext",
+            exeparams => {
+                copyright => $copyright,
+                name => "FIQRogue (console)",
+                description => "Dungeon exploration game (text interface)",
+                terminal => 1,
+            },
+        },
+        _install_sdl => {
+            object => "bpath:fiqrogue/src/main.c/fiqrogue-sdl$exeext",
+            install_dir => "gamesbindir",
+            install_elevation => "games",
+            exeparams => {
+                copyright => $copyright,
+                name => "FIQRogue (GUI)",
+                description => "Dungeon exploration game (graphical interface)",
+                terminal => 0,
+            },
+            install_feature => "gui",
+        },
+        _install_text_tilesets => {
+            object => qr{^bpath:tilesets/dat/merged/text.*\.nh4ct$},
+            install_dir => "gamesdatadir",
+        },
+        _install_fonts => {
+            object => qr{^bpath:tilesets/dat/fonts/.*\.png$},
+            install_dir => "gamesdatadir",
+            install_feature => "gui",
+        },
+    },
+}
