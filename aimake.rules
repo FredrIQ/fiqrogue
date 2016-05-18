@@ -2,6 +2,7 @@
 
 # There's a maximum combined length on the executable info structure.
 # So this is written concisely, so as to be able to fit everything in.
+# Based off the one used in FIQHack (https://github.com/FredrIQ/fiqhack)
 $copyright = "(c) Fredrik Ljungdahl, 2016";
 
 {
@@ -25,10 +26,9 @@ $copyright = "(c) Fredrik Ljungdahl, 2016";
     },
     features => {
         gui => {
-            description => "Tiles and fake terminal ports",
+            description => "Fake terminal ports",
             long_description => "Installs a GUI executable, that lets you ".
-                                "play with graphical tiles, and play the ".
-                                "text-based version without requiring the ".
+                                "play without requiring the ".
                                 "use of a separate terminal emulator.",
             object => qr=^path:(?:tilesets/dat(?!/text|/catalogues/text)
                                 | tilesets/util/tileset-image.c
