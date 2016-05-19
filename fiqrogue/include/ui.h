@@ -3,8 +3,19 @@
 #ifndef UI_H
 # define UI_H
 
-#include "uncursed.h"
+# include "uncursed.h"
+
+enum cmd {
+    CMD_LEFT,
+    CMD_DOWN,
+    CMD_UP,
+    CMD_RIGHT,
+    CMD_QUIT,
+    CMD_NONE,
+};
 
 extern struct WINDOW *ui_init(void);
+enum cmd ui_cmd(void);
+extern void ui_refresh(void);
 
-#endif
+#endif /* UI_H */
