@@ -32,7 +32,6 @@ mon_act(struct mon *mon)
         cmd == CMD_DOWN ||
         cmd == CMD_UP ||
         cmd == CMD_RIGHT) {
-        mvwaddstr(gamestate.win, mon->x, mon->y, ".");
         if (cmd == CMD_LEFT)
             mon->y--;
         else if (cmd == CMD_RIGHT)
@@ -49,8 +48,6 @@ mon_act(struct mon *mon)
             mon->y = 0;
         if (mon->y == ROOMSIZEY)
             mon->y--;
-        mvwaddstr(gamestate.win, mon->x, mon->y, "@");
-        wrefresh(gamestate.win);
     }
     return ACT_DONE;
 }
