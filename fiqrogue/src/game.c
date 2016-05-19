@@ -24,6 +24,9 @@ game_init(struct WINDOW *win)
     monlist_add(&pmon);
     free(mon_tmp); /* now get rid of it */
 
+    /* Create another monster */
+    mon_new(10, 10, true);
+
     ui_refresh();
 }
 
