@@ -1,3 +1,6 @@
+fiqrogue
+========
+
 FIQRogue is intended to be an experimental roguelike for learning purposes and to gain the experience of writing a C project entirely from scratch, rather than just working on already existing projects.
 
 Dependecies for building
