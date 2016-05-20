@@ -49,6 +49,7 @@ mon_act(struct mon *mon)
         if (mon->y == ROOMSIZEY)
             mon->y--;
     }
+
     return ACT_DONE;
 }
 

@@ -43,10 +43,10 @@
             printf(__VA_ARGS__);                \
     } while(0)
 
-static int fontwidth = 8;
-static int fontheight = 14;
-static int winwidth = 132;    /* width of the window, in units of fontwidth */
-static int winheight = 39;    /* height of the window, in units of fontheight */
+static int fontwidth = 10;
+static int fontheight = 10;
+static int winwidth = 80;    /* width of the window, in units of fontwidth */
+static int winheight = 24;    /* height of the window, in units of fontheight */
 
 static int resize_queued = 0;
 static int resized_recently = 0;

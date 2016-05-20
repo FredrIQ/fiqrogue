@@ -13,10 +13,10 @@ ui_init(void)
 {
     uncursed_set_title("FIQRogue");
     struct WINDOW *win = initscr();
-
     if (!win)
         return NULL; /* something went wrong... */
 
+    set_faketerm_font_file("data/font.png");
     wrefresh(win);
     return win;
 }
