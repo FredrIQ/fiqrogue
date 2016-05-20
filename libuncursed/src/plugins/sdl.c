@@ -78,6 +78,8 @@ static int monitored_fds_count_or_max;
 
 static int debug = 0;
 
+static int sdl_hook_getkeyorcodepointx(int, int *);
+
 /* force the minimum size as 80x24; many programs don't function properly with
    less than that */
 #define MINCHARWIDTH 80
@@ -801,6 +803,21 @@ drain_userevents(void)
 int
 sdl_hook_getkeyorcodepoint(int timeout_ms)
 {
+    /* Screen redrawing causes major lag (TODO: figure out why).
+       To avoid snowballing lag resulting by queueing up
+       WINDOWEVENT_EXPOSED (what causes redraws) cases,
+       only redraw once for every X events queued up. */
+    int redraw = 0;
+    int ret = sdl_hook_getkeyorcodepointx(timeout_ms, &redraw);
+    if (redraw)
+        sdl_hook_fullredraw();
+    return ret;
+}
+
+static int
+sdl_hook_getkeyorcodepointx(int timeout_ms, int *doredraw)
+{
+    *doredraw = 0;
     long tick_target = SDL_GetTicks() + timeout_ms;
     long key_tick_target = -1;
     long last_textediting_tick = -1 - TEXTEDITING_FILTER_TIME;
@@ -876,7 +893,7 @@ sdl_hook_getkeyorcodepoint(int timeout_ms)
                 resized_recently = 1;
 
             if (e.window.event == SDL_WINDOWEVENT_EXPOSED)
-                sdl_hook_fullredraw();
+                *doredraw = 1;
 
             if (e.window.event == SDL_WINDOWEVENT_CLOSE) {
                 hangup_mode = 1;
