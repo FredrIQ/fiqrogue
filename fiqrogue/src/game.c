@@ -46,6 +46,8 @@ game_loop(void)
                 continue;
             }
 
+            /* ACT_FREE is a free action, so continue until
+               an action that takes time is performed */
             act = ACT_FREE;
             while (act == ACT_FREE)
                 act = mon_act(mon);
@@ -53,7 +55,7 @@ game_loop(void)
             switch (act) {
             case ACT_DIED: /* died */
                 if (mon == &pmon) /* player died */
-                    return;
+                    return; /* this will abort the game */
 
                 mon_free(mon);
             case ACT_DONE:

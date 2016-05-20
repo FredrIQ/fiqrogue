@@ -17,4 +17,4 @@ extern struct mon pmon;
 extern void game_init(struct WINDOW *);
 extern void game_loop(void);
 
-#endif /* UI_H */
+#endif /* GAME_H */
