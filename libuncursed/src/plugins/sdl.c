@@ -1542,7 +1542,6 @@ sdl_hook_fullredraw(void)
                            .w = fontwidth * winwidth,
                            .h = fontheight * winheight
                        });
-    sdl_hook_flush();
 
     for (j = 0; j < winheight; j++)
         for (i = 0; i < winwidth; i++)
