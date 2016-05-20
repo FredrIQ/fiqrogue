@@ -28,11 +28,32 @@ Run the following commands in a shell
     $ cd build
     $ ../aimake -i /path/to/installdir
 
-Where installdir is where you want to install the application. Once you're done,
-you can run the resulting fiqrogue binary.
+Where installdir is where you want to install the application.
 
 
 Windows
 -------
 
 I don't own a Windows desktop. Sorry (TODO).
+
+
+Running
+=======
+
+To run the application, either do the following:
+
+Terminal
+--------
+
+Open a terminal and run the following commands
+
+    $ cd /path/to/installdir
+    $ ./fiqrogue # terminal (curses) version
+    OR
+    $ ./fiqrogue-sdl # graphical version
+
+
+GUI
+---
+
+Open the installation directory in your file explorer of choice, and run fiqrogue-sdl.
