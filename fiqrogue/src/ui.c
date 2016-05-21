@@ -60,7 +60,7 @@ ui_refresh(void)
         if (mon_dead(mon))
             continue;
 
-        mvwaddstr(gamestate.win, mon->x, mon->y, "@");
+        mvwaddstr(gamestate.win, mon->x, mon->y, mons[mon->typ].letter);
     }
     wmove(gamestate.win, pmon.x, pmon.y);
     wrefresh(gamestate.win);

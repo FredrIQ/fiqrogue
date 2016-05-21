@@ -3,7 +3,7 @@
 #ifndef MON_H
 # define MON_H
 
-# include <stdbool.h>
+# include "mondata.h"
 
 /* Actions */
 enum act {
@@ -16,13 +16,14 @@ struct mon {
     int x;
     int y;
     bool dead;
+    enum montyp typ;
     struct mon *nmon;
 };
 
 extern enum act mon_act(struct mon *);
 #define mon_dead(mon) ((mon)->dead)
 extern void mon_free(struct mon *);
-extern struct mon *mon_new(int, int, bool);
+extern struct mon *mon_new(enum montyp, int, int, bool);
 extern bool monlist_add(struct mon *);
 extern bool monlist_free(struct mon *);
 

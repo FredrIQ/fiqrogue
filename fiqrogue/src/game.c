@@ -19,13 +19,13 @@ game_init(struct WINDOW *win)
     /* We want to assign a proper monster struct to the player, but mon_new()
        will malloc additional memory which we don't care about in this case.
        Store this result in mon_tmp so we can free it properly */
-    struct mon *mon_tmp = mon_new(10, 10, false);
+    struct mon *mon_tmp = mon_new(MON_PLAYER, 10, 10, false);
     pmon = *mon_tmp;
     monlist_add(&pmon);
     free(mon_tmp); /* now get rid of it */
 
     /* Create another monster */
-    mon_new(10, 10, true);
+    mon_new(MON_JACKAL, 10, 10, true);
 
     ui_refresh();
 }

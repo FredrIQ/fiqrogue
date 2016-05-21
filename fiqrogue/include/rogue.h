@@ -5,11 +5,13 @@
 
 /* External resources to include */
 
+# include <stdbool.h>
 # include <stdio.h>
 # include <stdlib.h>
 # include <string.h>
 
 # define ROOMSIZEX 20
-# define ROOMSIZEY 40
+# define ROOMSIZEY 80
+# define MAXSTRING 64
 
 #endif /* ROGUE_H */

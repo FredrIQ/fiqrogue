@@ -65,7 +65,7 @@ mon_free(struct mon *mon)
 
 /* Create a new monster */
 struct mon *
-mon_new(int x, int y, bool add_to_monlist)
+mon_new(enum montyp typ, int x, int y, bool add_to_monlist)
 {
     struct mon *mon = malloc(sizeof (struct mon));
     memset(mon, 0, sizeof (struct mon));
@@ -76,6 +76,9 @@ mon_new(int x, int y, bool add_to_monlist)
 
     mon->x = x;
     mon->y = y;
+    if (typ > LAST_MON)
+        typ = LAST_MON;
+    mon->typ = typ;
 
     /* Add to the monster list */
     if (add_to_monlist)
