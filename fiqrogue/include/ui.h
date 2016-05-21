@@ -10,6 +10,7 @@ enum cmd {
     CMD_DOWN,
     CMD_UP,
     CMD_RIGHT,
+    CMD_PICKUP,
     CMD_QUIT,
     CMD_NONE,
 };

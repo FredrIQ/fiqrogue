@@ -6,17 +6,18 @@
 # include "objdata.h"
 
 struct obj {
-    int x;
+    int x; /* x/y is not accurate if the object isn't on the floor */
     int y;
     enum objtyp typ;
     struct mon *carrier;
     struct obj *nobj;
 };
 
+extern struct obj *obj_at(int, int);
 extern void obj_free(struct obj *);
 extern struct obj *obj_new(enum objtyp, int, int, bool);
 extern bool objlist_addlevel(struct obj *);
-extern bool objlist_add(struct obj *, struct obj *);
+extern bool objlist_add(struct obj **, struct obj *);
 extern bool objlist_free(struct obj *);
 
 #endif /* OBJ_H */

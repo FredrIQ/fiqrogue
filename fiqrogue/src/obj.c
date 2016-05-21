@@ -7,6 +7,18 @@
 
 /* Object handling */
 
+/* Returns the object at the given location, if any */
+struct obj *
+obj_at(int x, int y)
+{
+    struct obj *obj;
+    for (obj = gamestate.objlist; obj; obj = obj->nobj) {
+        if (obj->x == x && obj->y == y)
+            return obj;
+    }
+    return NULL;
+}
+
 /* Deallocate an object */
 void
 obj_free(struct obj *obj)
@@ -44,18 +56,18 @@ obj_new(enum objtyp typ, int x, int y, bool add_to_objlist)
 bool
 objlist_addlevel(struct obj *obj)
 {
-    return objlist_add(gamestate.objlist, obj);
+    return objlist_add(&gamestate.objlist, obj);
 }
 
 /* Add an object to a list. Implies freeing it from elsewhere */
 bool
-objlist_add(struct obj *chain, struct obj *obj)
+objlist_add(struct obj **chain, struct obj *obj)
 {
     if (!obj)
         return false; /* shouldn't happen */
 
     struct obj *otmp;
-    for (otmp = chain; otmp; otmp = otmp->nobj) {
+    for (otmp = *chain; otmp; otmp = otmp->nobj) {
         if (obj == otmp)
             return false; /* already in the list */
     }
@@ -63,26 +75,25 @@ objlist_add(struct obj *chain, struct obj *obj)
     /* Free it from a potential other list */
     objlist_free(obj);
 
-    obj->nobj = chain;
-    gamestate.objlist = obj;
+    obj->nobj = *chain;
+    *chain = obj;
     return true;
 }
 
-/* Free an object from the list */
+/* Frees an object from the chain it is in */
 bool
 objlist_free(struct obj *obj)
 {
     if (!obj)
         return false; /* oops? */
 
-    /* Check in which list chain the object is in */
-    struct obj *chain = gamestate.objlist;
+    struct obj **chain = &gamestate.objlist;
     if (obj->carrier)
-        chain = obj->carrier->invent;
+        chain = &obj->carrier->invent;
 
     struct obj *prevobj = NULL;
     struct obj *listobj = NULL;
-    for (listobj = chain; listobj; listobj = listobj->nobj) {
+    for (listobj = *chain; listobj; listobj = listobj->nobj) {
         if (obj != listobj) {
             prevobj = listobj;
             continue;
@@ -90,8 +101,8 @@ objlist_free(struct obj *obj)
 
         if (prevobj)
             prevobj->nobj = listobj->nobj;
-        else /* listobj is gamestate.objlist */
-            chain = listobj->nobj;
+        else
+            *chain = listobj->nobj;
         return true; /* we're done here */
     }
     return false; /* not in the list */

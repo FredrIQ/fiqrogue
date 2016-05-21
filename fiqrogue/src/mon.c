@@ -2,6 +2,7 @@
 
 #include "game.h"
 #include "mon.h"
+#include "obj.h"
 #include "rogue.h"
 #include "ui.h"
 
@@ -28,6 +29,17 @@ mon_act(struct mon *mon)
 
     if (cmd == CMD_QUIT)
         return ACT_DIED; /* we "died" */
+
+    if (cmd == CMD_PICKUP) {
+        struct obj *obj = obj_at(mon->x, mon->y);
+        if (!obj)
+            return ACT_FREE; /* nothing here, don't waste a turn */
+
+        objlist_add(&mon->invent, obj);
+        obj->carrier = mon;
+        return ACT_DONE;
+    }
+
     if (cmd == CMD_LEFT ||
         cmd == CMD_DOWN ||
         cmd == CMD_UP ||

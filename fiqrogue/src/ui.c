@@ -26,12 +26,12 @@ ui_init(void)
 enum cmd
 ui_cmd(void)
 {
-    unsigned key;
+    unsigned key = 0;
     do {
         timeout_get_wch(1000, &key);
     } while (!key);
     switch (key) {
-    case 'h': case KEY_LEFT: case KEY_B1:
+    case 'h': case KEY_LEFT: case KEY_B1: /* B1/C2/A2/B3 are numpad 4/2/8/6 */
         return CMD_LEFT;
     case 'j': case KEY_DOWN: case KEY_C2:
         return CMD_DOWN;
@@ -39,6 +39,8 @@ ui_cmd(void)
         return CMD_UP;
     case 'l': case KEY_RIGHT: case KEY_B3:
         return CMD_RIGHT;
+    case ',':
+        return CMD_PICKUP;
     case 'S': /* "save" (or for now, suicide!) */
         return CMD_QUIT;
     }
