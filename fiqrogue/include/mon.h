@@ -17,7 +17,7 @@ struct mon {
     int y;
     bool dead;
     enum montyp typ;
-    struct object *invent; /* inventory */
+    struct obj *invent; /* inventory */
     struct mon *nmon;
 };
 

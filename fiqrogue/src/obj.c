@@ -36,24 +36,34 @@ obj_new(enum objtyp typ, int x, int y, bool add_to_objlist)
 
     /* Add to the object list */
     if (add_to_objlist)
-        objlist_add(obj);
+        objlist_addlevel(obj);
     return obj;
 }
 
-/* Add an object to the list */
+/* Add an object to the main list */
 bool
-objlist_add(struct obj *obj)
+objlist_addlevel(struct obj *obj)
+{
+    return objlist_add(gamestate.objlist, obj);
+}
+
+/* Add an object to a list. Implies freeing it from elsewhere */
+bool
+objlist_add(struct obj *chain, struct obj *obj)
 {
     if (!obj)
         return false; /* shouldn't happen */
 
     struct obj *otmp;
-    for (otmp = gamestate.objlist; otmp; otmp = otmp->nobj) {
+    for (otmp = chain; otmp; otmp = otmp->nobj) {
         if (obj == otmp)
             return false; /* already in the list */
     }
 
-    obj->nobj = gamestate.objlist;
+    /* Free it from a potential other list */
+    objlist_free(obj);
+
+    obj->nobj = chain;
     gamestate.objlist = obj;
     return true;
 }
@@ -65,9 +75,14 @@ objlist_free(struct obj *obj)
     if (!obj)
         return false; /* oops? */
 
+    /* Check in which list chain the object is in */
+    struct obj *chain = gamestate.objlist;
+    if (obj->carrier)
+        chain = obj->carrier->invent;
+
     struct obj *prevobj = NULL;
     struct obj *listobj = NULL;
-    for (listobj = gamestate.objlist; listobj; listobj = listobj->nobj) {
+    for (listobj = chain; listobj; listobj = listobj->nobj) {
         if (obj != listobj) {
             prevobj = listobj;
             continue;
@@ -76,7 +91,7 @@ objlist_free(struct obj *obj)
         if (prevobj)
             prevobj->nobj = listobj->nobj;
         else /* listobj is gamestate.objlist */
-            gamestate.objlist = listobj->nobj;
+            chain = listobj->nobj;
         return true; /* we're done here */
     }
     return false; /* not in the list */

@@ -31,12 +31,13 @@ static const struct objcategory objcats[] = {
 
 struct objdata {
     char name[MAXSTRING];
+    enum objcat cat;
 };
 
 static const struct objdata objs[] = {
-    {"dummy"},
-    {"sword"},
-    {"dagger"},
+    {"dummy", OBC_NONE},
+    {"sword", OBC_WEAPON},
+    {"dagger", OBC_WEAPON},
 };
 
 #endif /* OBJDATA_H */

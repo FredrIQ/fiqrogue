@@ -2,6 +2,7 @@
 
 #include "game.h"
 #include "mon.h"
+#include "obj.h"
 #include "rogue.h"
 #include "ui.h"
 
@@ -54,7 +55,13 @@ ui_refresh(void)
         for (y = 0; y < ROOMSIZEY; y++)
             mvwaddstr(gamestate.win, x, y, ".");
 
-    /* Place the monsters present */
+    /* Place the objects */
+    struct obj *obj;
+    for (obj = gamestate.objlist; obj; obj = obj->nobj)
+        mvwaddstr(gamestate.win, obj->x, obj->y,
+                  objcats[objs[obj->typ].cat].letter);
+
+    /* Place the monsters */
     struct mon *mon;
     for (mon = gamestate.monlist; mon; mon = mon->nmon) {
         if (mon_dead(mon))
