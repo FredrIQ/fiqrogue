@@ -3,6 +3,7 @@
 #ifndef OBJ_H
 # define OBJ_H
 
+# include "mon.h"
 # include "objdata.h"
 
 struct obj {
@@ -13,6 +14,7 @@ struct obj {
     struct obj *nobj;
 };
 
+extern void pickobj(struct mon *, struct obj *);
 extern struct obj *obj_at(int, int);
 extern void obj_free(struct obj *);
 extern struct obj *obj_new(enum objtyp, int, int, bool);

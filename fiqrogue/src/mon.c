@@ -35,8 +35,7 @@ mon_act(struct mon *mon)
         if (!obj)
             return ACT_FREE; /* nothing here, don't waste a turn */
 
-        objlist_add(&mon->invent, obj);
-        obj->carrier = mon;
+        pickobj(mon, obj);
         return ACT_DONE;
     }
 
