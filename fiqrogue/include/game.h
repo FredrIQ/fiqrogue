@@ -8,6 +8,7 @@
 
 struct gamestate {
     struct mon *monlist; /* monster list */
+    struct obj *objlist; /* object list */
     struct WINDOW *win; /* game window */
 };
 

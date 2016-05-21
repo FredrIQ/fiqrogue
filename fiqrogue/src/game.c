@@ -2,6 +2,7 @@
 
 #include "game.h"
 #include "mon.h"
+#include "obj.h"
 #include "rogue.h"
 #include "ui.h"
 
@@ -26,6 +27,9 @@ game_init(struct WINDOW *win)
 
     /* Create another monster */
     mon_new(MON_JACKAL, 10, 10, true);
+
+    /* Create a weapon */
+    obj_new(OBJ_SWORD, 20, 20, true);
 
     ui_refresh();
 }
