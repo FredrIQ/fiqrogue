@@ -47,20 +47,25 @@ ui_cmd(void)
         return CMD_PICKUP;
     case 'S': /* "save" (or for now, suicide!) */
         return CMD_QUIT;
+    case KEY_RESIZE:
+        ui_reset(true);
+        return CMD_NONE;
     }
     return CMD_NONE; /* TODO: write "Unknown command" or similar somewhere */
 }
 
 /* Resets the interface, redoing (or possibly doing, this is also called on first run) all
-   the windows from scratch. Called on window resizing */
+   the windows from scratch. Called on window resizing.
+   Setting output_screen to false allows one to avoid an implied ui_refresh, which
+   can be useful if the level content isn't ready. */
 void
-ui_reset(void)
+ui_reset(bool output_screen)
 {
     /* Kill existing windows */
     if (window.msg)
         delwin(window.msg);
     if (window.level)
-        delwin(window.level);
+        werase(window.level);
     /* TODO
     if (window.menu)
     ui_killmenus(window.menu); */
@@ -78,18 +83,22 @@ ui_reset(void)
             timeout_get_wch(-1, &key);
         } while (key != KEY_RESIZE);
     }
-    werase(window.root); /* Blanks the window */
+    wclear(window.root); /* Blanks the window */
+    wrefresh(window.root);
 
     /* For now, the only thing that actually changes is height. */
     int x = 0, y = 0, h = 0, w = 0;
 
-    /* The message area uses up whatever space isn't taken by the level, capped at 5. */
+    /* The message area uses up whatever space isn't taken by the level, capped at 10. */
     h = LINES - ROOMSIZEX;
-    if (h > 5)
-        h = 5;
+    if (h > 10)
+        h = 10;
     window.msg = subwin(window.root, h, w, x, y);
     x += h;
     window.level = subwin(window.root, ROOMSIZEX, ROOMSIZEY, x, y);
+
+    if (output_screen)
+        ui_refresh();
 }
 
 /* Refresh the UI */

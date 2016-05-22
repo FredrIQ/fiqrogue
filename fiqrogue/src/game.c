@@ -18,7 +18,7 @@ game_init(void)
     ui_init();
 
     /* Resets the user interface, which creates all windows from scratch */
-    ui_reset();
+    ui_reset(false);
 
     /* We want to assign a proper monster struct to the player, but mon_new()
        will malloc additional memory which we don't care about in this case.

@@ -3,6 +3,7 @@
 #ifndef UI_H
 # define UI_H
 
+# include "rogue.h"
 # include "uncursed.h"
 
 enum cmd {
@@ -33,7 +34,7 @@ extern struct windows window;
 
 extern void ui_init(void);
 enum cmd ui_cmd(void);
-extern void ui_reset(void);
+extern void ui_reset(bool);
 extern void ui_refresh(void);
 
 #endif /* UI_H */
