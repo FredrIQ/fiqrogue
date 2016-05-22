@@ -15,8 +15,25 @@ enum cmd {
     CMD_NONE,
 };
 
-extern struct WINDOW *ui_init(void);
+/* winmenu is a simple linked list containing (sub)menus */
+struct winmenu {
+    WINDOW *win;
+    struct winmenu *next;
+};
+
+/* All game windows are stored in a struct windows named just "windows" */
+struct windows {
+    WINDOW *root; /* stdscr */
+    WINDOW *msg; /* message area */
+    WINDOW *level; /* level area */
+    struct winmenu *menu;
+};
+
+extern struct windows window;
+
+extern void ui_init(void);
 enum cmd ui_cmd(void);
+extern void ui_reset(void);
 extern void ui_refresh(void);
 
 #endif /* UI_H */

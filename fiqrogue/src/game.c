@@ -13,9 +13,12 @@ struct gamestate gamestate; /* holds misc things */
 
 /* Initialize the game state */
 void
-game_init(struct WINDOW *win)
+game_init(void)
 {
-    gamestate.win = win;
+    ui_init();
+
+    /* Resets the user interface, which creates all windows from scratch */
+    ui_reset();
 
     /* We want to assign a proper monster struct to the player, but mon_new()
        will malloc additional memory which we don't care about in this case.

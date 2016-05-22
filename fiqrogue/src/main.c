@@ -31,13 +31,7 @@ main(int argc, char *argv[])
         }
     }
 
-    struct WINDOW *win = ui_init();
-    if (!win) {
-        puts("Unable to initialize libuncursed.");
-        exit(EXIT_FAILURE);
-    }
-
-    game_init(win);
+    game_init();
     game_loop();
     endwin();
 }

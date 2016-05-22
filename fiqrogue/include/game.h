@@ -9,13 +9,12 @@
 struct gamestate {
     struct mon *monlist; /* monster list */
     struct obj *objlist; /* object list */
-    struct WINDOW *win; /* game window */
 };
 
 extern struct gamestate gamestate;
 extern struct mon pmon;
 
-extern void game_init(struct WINDOW *);
+extern void game_init(void);
 extern void game_loop(void);
 
 #endif /* GAME_H */

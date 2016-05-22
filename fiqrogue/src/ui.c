@@ -8,18 +8,22 @@
 
 /* UI handling functionality, and the lowerlevel interface to libuncursed */
 
+struct windows window;
+
 /* Initialize the interface */
-struct WINDOW *
+void
 ui_init(void)
 {
     uncursed_set_title("FIQRogue");
     struct WINDOW *win = initscr();
-    if (!win)
-        return NULL; /* something went wrong... */
+    if (!win) {
+        puts("Unable to initialize libuncursed.");
+        exit(EXIT_FAILURE);
+    }
 
     set_faketerm_font_file("data/font.png");
     wrefresh(win);
-    return win;
+    window.root = win;
 }
 
 /* Parses key input and returns in-game commands */
@@ -47,6 +51,47 @@ ui_cmd(void)
     return CMD_NONE; /* TODO: write "Unknown command" or similar somewhere */
 }
 
+/* Resets the interface, redoing (or possibly doing, this is also called on first run) all
+   the windows from scratch. Called on window resizing */
+void
+ui_reset(void)
+{
+    /* Kill existing windows */
+    if (window.msg)
+        delwin(window.msg);
+    if (window.level)
+        delwin(window.level);
+    /* TODO
+    if (window.menu)
+    ui_killmenus(window.menu); */
+
+    /* Ensure that we have at least an 80x24 area */
+    while (LINES < 24 || COLS < 80) {
+        /* Ensure that we at least have enough screen area to draw out an error
+           message... If not, just patiently wait until the user sets a sane size.
+           The string was counted to the same length as COLS minimum. If it's changed,
+           change the minimum COLS. */
+        if (LINES >= 1 && COLS >= 42)
+            mvwaddstr(window.root, 0, 0, "fiqrogue needs at least 80x24 to function.");
+        unsigned key = 0;
+        do {
+            timeout_get_wch(-1, &key);
+        } while (key != KEY_RESIZE);
+    }
+    werase(window.root); /* Blanks the window */
+
+    /* For now, the only thing that actually changes is height. */
+    int x = 0, y = 0, h = 0, w = 0;
+
+    /* The message area uses up whatever space isn't taken by the level, capped at 5. */
+    h = LINES - ROOMSIZEX;
+    if (h > 5)
+        h = 5;
+    window.msg = subwin(window.root, h, w, x, y);
+    x += h;
+    window.level = subwin(window.root, ROOMSIZEX, ROOMSIZEY, x, y);
+}
+
 /* Refresh the UI */
 void
 ui_refresh(void)
@@ -55,12 +100,12 @@ ui_refresh(void)
     int x, y;
     for (x = 0; x < ROOMSIZEX; x++)
         for (y = 0; y < ROOMSIZEY; y++)
-            mvwaddstr(gamestate.win, x, y, ".");
+            mvwaddstr(window.level, x, y, ".");
 
     /* Place the objects */
     struct obj *obj;
     for (obj = gamestate.objlist; obj; obj = obj->nobj)
-        mvwaddstr(gamestate.win, obj->x, obj->y,
+        mvwaddstr(window.level, obj->x, obj->y,
                   objcats[objs[obj->typ].cat].letter);
 
     /* Place the monsters */
@@ -69,8 +114,8 @@ ui_refresh(void)
         if (mon_dead(mon))
             continue;
 
-        mvwaddstr(gamestate.win, mon->x, mon->y, mons[mon->typ].letter);
+        mvwaddstr(window.level, mon->x, mon->y, mons[mon->typ].letter);
     }
-    wmove(gamestate.win, pmon.x, pmon.y);
-    wrefresh(gamestate.win);
+    wmove(window.level, pmon.x, pmon.y);
+    wrefresh(window.level);
 }
