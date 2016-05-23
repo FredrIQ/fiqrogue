@@ -8,18 +8,23 @@
 
 enum cmd {
     CMD_HELP,
-    CMD_LEFT,
-    CMD_DOWN,
-    CMD_UP,
-    CMD_RIGHT,
+    CMD_MOVE,
     CMD_PICKUP,
     CMD_QUIT,
     CMD_UNKNOWN,
     CMD_NONE, /* Used for things like resizing */
 };
 
-/* NUM_MSGLINES is the upper limit. In practice the limit can be smaller as a result of a
-   smaller game area. */
+struct command {
+    enum cmd typ;
+    unsigned x; /* Specific x/y */
+    unsigned y;
+    int dx; /* Relative x/y (do X upwards/etc) */
+    int dy;
+};
+
+/* NUM_MSGLINES is the upper limit. In practice the limit can be smaller as a
+   result of a smaller game area. */
 # define NUM_MSGLINES 10
 # define NUM_MESSAGES 50
 
@@ -43,7 +48,7 @@ extern struct windows window;
 # define CUR_MSGLINES getmaxy(window.msgarea)
 
 extern void ui_init(void);
-enum cmd ui_cmd(void);
+extern void ui_cmd(struct command *);
 extern void pline(const char *, ...);
 extern void ui_reset(bool);
 extern void ui_refresh(void);

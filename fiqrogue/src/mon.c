@@ -8,75 +8,7 @@
 
 /* Monster handling */
 
-/*
- * Monster action.
- * Returns:
- * ACT_FREE - can act further this turn
- * ACT_DONE - is done for the turn
- * ACT_DIED - died
- */
-enum act
-mon_act(struct mon *mon)
-{
-    struct obj *obj;
-    enum cmd cmd = CMD_NONE;
-    if (mon == &pmon) {
-        /* Refresh the UI before input */
-        ui_refresh();
-        do {
-            cmd = ui_cmd();
-        } while (cmd == CMD_NONE);
-    } else
-        cmd = (mon->x == 30 ? CMD_LEFT : CMD_RIGHT); /* dummy AI */
-
-    switch (cmd) {
-    case CMD_HELP:
-        pline("Some quick help: h=Left, j=Down, k=Up, l=Right, ,=Pickup, "
-              "S=quit.");
-        pline("You can also use the numpad or arrow keys to move.");
-        return ACT_FREE;
-    case CMD_QUIT:
-        return ACT_DIED;
-    case CMD_PICKUP:
-        obj = obj_at(mon->x, mon->y);
-        if (!obj) {
-            pline("Nothing to pickup!");
-            return ACT_FREE; /* nothing here, don't waste a turn */
-        }
-
-        pickobj(mon, obj);
-        return ACT_DONE;
-    case CMD_LEFT:
-    case CMD_DOWN:
-    case CMD_UP:
-    case CMD_RIGHT:
-        if (cmd == CMD_LEFT)
-            mon->x--;
-        else if (cmd == CMD_RIGHT)
-            mon->x++;
-        else if (cmd == CMD_UP)
-            mon->y--;
-        else if (cmd == CMD_DOWN)
-            mon->y++;
-        if (mon->x < 0)
-            mon->x = 0;
-        if (mon->x == ROOMSIZEX)
-            mon->x--;
-        if (mon->y < 0)
-            mon->y = 0;
-        if (mon->y == ROOMSIZEY)
-            mon->y--;
-        break;
-    case CMD_UNKNOWN:
-        pline("Unknown command!");
-        return ACT_FREE;
-    default:
-        pline("Unhandled case: %d", cmd);
-        return ACT_FREE;
-    }
-
-    return ACT_DONE;
-}
+static bool mon_move(struct mon *, struct command *);
 
 /* Deallocate a monster */
 void
@@ -151,4 +83,105 @@ monlist_free(struct mon *mon)
         return true; /* we're done here */
     }
     return false; /* not in the list */
+}
+
+/*
+ * Monster action.
+ * Returns:
+ * ACT_FREE - can act further this turn
+ * ACT_DONE - is done for the turn
+ * ACT_DIED - died
+ */
+enum act
+mon_act(struct mon *mon)
+{
+    struct obj *obj;
+    struct command cmd = {0};
+    cmd.typ = CMD_NONE;
+
+    if (mon == &pmon) {
+        /* Refresh the UI before input */
+        ui_refresh();
+        ui_cmd(&cmd);
+    } else {
+        cmd.typ = CMD_MOVE;
+        cmd.dx = (mon->x == 10 ? -1 : 1); /* dummy AI */
+    }
+
+    switch (cmd.typ) {
+    case CMD_HELP:
+        pline("Some quick help: h=Left, j=Down, k=Up, l=Right, ,=Pickup, "
+              "S=quit.");
+        pline("You can also use the numpad or arrow keys to move.");
+        return ACT_FREE;
+    case CMD_QUIT:
+        return ACT_DIED;
+    case CMD_PICKUP:
+        obj = obj_at(mon->x, mon->y);
+        if (!obj) {
+            pline("Nothing to pickup!");
+            return ACT_FREE; /* nothing here, don't waste a turn */
+        }
+
+        pickobj(mon, obj);
+        return ACT_DONE;
+    case CMD_MOVE:
+        mon_move(mon, &cmd);
+        return ACT_DONE;
+    case CMD_UNKNOWN:
+        pline("Unknown command!");
+        return ACT_FREE;
+    default:
+        pline("Unhandled case: %d", cmd);
+        return ACT_FREE;
+    }
+
+    return ACT_DONE;
+}
+
+/* Returns the monster at the given location, or NULL if there's nothing
+   there */
+struct mon *
+mon_at(int x, int y)
+{
+    struct mon *mon;
+    for (mon = gamestate.monlist; mon; mon = mon->nmon)
+    {
+        if (mon->dead)
+            continue;
+
+        if (mon->x == x && mon->y == y)
+            return mon;
+    }
+
+    return NULL;
+}
+
+/* Movement handling */
+static bool
+mon_move(struct mon *mon, struct command *cmd)
+{
+    if (!mon)
+        return false;
+
+    bool you = (mon == &pmon);
+    int x = mon->x, y = mon->y;
+    x += cmd->dx;
+    y += cmd->dy;
+
+    if (x < 0 || x >= ROOMSIZEX || y < 0 || y >= ROOMSIZEY) {
+        if (you)
+            pline("That's a wall.");
+        return false;
+    }
+
+    if (mon_at(x, y)) {
+        if (you)
+            pline("Sorry, you can't fight stuff yet.");
+        return false;
+    }
+
+    mon->x = x;
+    mon->y = y;
+    return true;
 }

@@ -36,12 +36,13 @@ ui_init(void)
 }
 
 /* Parses key input and returns in-game commands
-   TODO: This could use a second level of abstraction between this and mon_act, because
-   we want a way to handle purely interface-based commands, and commands that require
-   additional "parameters" (for example: eat item X). That way we also avoid returning
-   CMD_NONE to mon_act for resize events, something purely user-specific. */
-enum cmd
-ui_cmd(void)
+   TODO: This could use a second level of abstraction between this and mon_act,
+   because we want a way to handle purely interface-based commands, and
+   commands that require additional "parameters" (for example: eat item X).
+   That way we also avoid returning CMD_NONE to mon_act for resize events,
+   something purely user-specific. */
+void
+ui_cmd(struct command *cmd)
 {
     unsigned key = 0;
     do {
@@ -49,24 +50,37 @@ ui_cmd(void)
     } while (!key);
     switch (key) {
     case '?':
-        return CMD_HELP;
+        cmd->typ = CMD_HELP;
+        break;
     case 'h': case KEY_LEFT: case KEY_B1: /* B1/C2/A2/B3 are numpad 4/2/8/6 */
-        return CMD_LEFT;
+        cmd->typ = CMD_MOVE;
+        cmd->dx = -1;
+        break;
     case 'j': case KEY_DOWN: case KEY_C2:
-        return CMD_DOWN;
+        cmd->typ = CMD_MOVE;
+        cmd->dy = 1;
+        break;
     case 'k': case KEY_UP: case KEY_A2:
-        return CMD_UP;
+        cmd->typ = CMD_MOVE;
+        cmd->dy = -1;
+        break;
     case 'l': case KEY_RIGHT: case KEY_B3:
-        return CMD_RIGHT;
+        cmd->typ = CMD_MOVE;
+        cmd->dx = 1;
+        break;
     case ',':
-        return CMD_PICKUP;
+        cmd->typ = CMD_PICKUP;
+        break;
     case 'S': /* "save" (or for now, suicide!) */
-        return CMD_QUIT;
+        cmd->typ = CMD_QUIT;
+        break;
     case KEY_RESIZE:
         ui_reset(true);
-        return CMD_NONE;
+        cmd->typ = CMD_NONE;
+        break;
+    default:
+        cmd->typ = CMD_UNKNOWN;
     }
-    return CMD_UNKNOWN;
 }
 
 /* Print out a message (in printf-format) on the screen */
@@ -154,8 +168,8 @@ ui_writemessage(const char *msg, bool update_window)
             }
         }
 
-        /* Add part of the string to the message window and free up the now redundant
-           part of msg */
+        /* Add part of the string to the message window and free up the now
+           redundant part of msg */
         char *new = malloc(breakpoint);
         strncpy(new, buffer + offset, breakpoint-1);
         new[breakpoint-1] = '\0'; /* add null terminator */
@@ -185,10 +199,10 @@ ui_writemessage(const char *msg, bool update_window)
     return;
 }
 
-/* Resets the interface, redoing (or possibly doing, this is also called on first run) all
-   the windows from scratch. Called on window resizing.
-   Setting output_screen to false allows one to avoid an implied ui_refresh, which
-   can be useful if the level content isn't ready. */
+/* Resets the interface, redoing (or possibly doing, this is also called on
+   first run) all the windows from scratch. Called on window resizing.
+   Setting output_screen to false allows one to avoid an implied ui_refresh,
+   which can be useful if the level content isn't ready. */
 void
 ui_reset(bool output_screen)
 {
@@ -203,12 +217,9 @@ ui_reset(bool output_screen)
 
     /* Ensure that we have at least an 80x24 area */
     while (LINES < 24 || COLS < 80) {
-        /* Ensure that we at least have enough screen area to draw out an error
-           message... If not, just patiently wait until the user sets a sane size.
-           The string was counted to the same length as COLS minimum. If it's changed,
-           change the minimum COLS. */
-        if (LINES >= 1 && COLS >= 42)
-            mvwaddstr(window.root, 0, 0, "fiqrogue needs at least 80x24 to function.");
+        const char *toosmall = "fiqrogue needs at least 80x24 to function.";
+        if (LINES >= 1 && COLS >= strlen(toosmall))
+            mvwaddstr(window.root, 0, 0, toosmall);
         unsigned key = 0;
         do {
             timeout_get_wch(-1, &key);
@@ -217,8 +228,8 @@ ui_reset(bool output_screen)
     wclear(window.root); /* Blanks the window */
     wrefresh(window.root);
 
-    /* For now, the only thing that actually changes on resize is height of different
-       areas, the width is always "the entire screen". */
+    /* For now, the only thing that actually changes on resize is height of
+       different areas, the width is always "the entire screen". */
     int top = 0, height = 0;
 
     /* Calculate message area height */

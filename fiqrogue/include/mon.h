@@ -21,11 +21,12 @@ struct mon {
     struct mon *nmon;
 };
 
-extern enum act mon_act(struct mon *);
 #define mon_dead(mon) ((mon)->dead)
 extern void mon_free(struct mon *);
 extern struct mon *mon_new(enum montyp, int, int, bool);
 extern bool monlist_add(struct mon *);
 extern bool monlist_free(struct mon *);
+extern enum act mon_act(struct mon *);
+extern struct mon *mon_at(int, int);
 
 #endif /* MON_H */
