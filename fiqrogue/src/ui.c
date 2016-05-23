@@ -5,6 +5,7 @@
 #include "obj.h"
 #include "rogue.h"
 #include "ui.h"
+#include "vision.h"
 
 /* UI handling functionality, and the lowerlevel interface to libuncursed */
 
@@ -149,7 +150,8 @@ ui_writemessage(const char *msg, bool update_window)
     strcpy(buffer, msg);
     int offset = 0;
 
-    /* Check if we need to scroll, possibly several times */
+    /* Check if we need to scroll, possibly several times. +2 is to include
+       double-space inbetween messages */
     while (winlen + msglen + 2 >= COLS) {
         strarray_shift(window.msg, NUM_MSGLINES);
         if (winlen) {
@@ -252,11 +254,19 @@ ui_reset(bool output_screen)
 void
 ui_refresh(void)
 {
+    fov_recalc();
+
     /* Display a playfield */
+    werase(window.level);
+
     int x, y;
-    for (x = 0; x < ROOMSIZEX; x++)
-        for (y = 0; y < ROOMSIZEY; y++)
-            mvwaddstr(window.level, y, x, ".");
+    for (x = 0; x < ROOMSIZEX; x++) {
+        for (y = 0; y < ROOMSIZEY; y++) {
+            if ((gamestate.vismap[x][y] & MAP_VISIBLE))
+                mvwaddstr(window.level, y, x,
+                          has_obstacle(x, y) ? "#" : ".");
+        }
+    }
 
     /* Place the objects */
     struct obj *obj;
