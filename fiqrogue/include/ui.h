@@ -7,13 +7,15 @@
 # include "uncursed.h"
 
 enum cmd {
+    CMD_HELP,
     CMD_LEFT,
     CMD_DOWN,
     CMD_UP,
     CMD_RIGHT,
     CMD_PICKUP,
     CMD_QUIT,
-    CMD_NONE,
+    CMD_UNKNOWN,
+    CMD_NONE, /* Used for things like resizing */
 };
 
 /* NUM_MSGLINES is the upper limit. In practice the limit can be smaller as a result of a

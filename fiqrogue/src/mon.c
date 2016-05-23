@@ -18,22 +18,25 @@
 enum act
 mon_act(struct mon *mon)
 {
-    enum cmd cmd;
+    struct obj *obj;
+    enum cmd cmd = CMD_NONE;
     if (mon == &pmon) {
         /* Refresh the UI before input */
         ui_refresh();
-        cmd = ui_cmd();
+        do {
+            cmd = ui_cmd();
+        } while (cmd == CMD_NONE);
     } else
         cmd = (mon->y == 30 ? CMD_LEFT : CMD_RIGHT); /* dummy AI */
 
-    if (cmd == CMD_NONE)
-        return ACT_FREE; /* TODO: "unknown command" */
-
-    if (cmd == CMD_QUIT)
-        return ACT_DIED; /* we "died" */
-
-    if (cmd == CMD_PICKUP) {
-        struct obj *obj = obj_at(mon->x, mon->y);
+    switch (cmd) {
+    case CMD_HELP:
+        pline("Some quick help: h=Left, j=Down, k=Up, l=Right, ,=Pickup");
+        return ACT_FREE;
+    case CMD_QUIT:
+        return ACT_DIED;
+    case CMD_PICKUP:
+        obj = obj_at(mon->x, mon->y);
         if (!obj) {
             pline("Nothing to pickup!");
             return ACT_FREE; /* nothing here, don't waste a turn */
@@ -41,12 +44,10 @@ mon_act(struct mon *mon)
 
         pickobj(mon, obj);
         return ACT_DONE;
-    }
-
-    if (cmd == CMD_LEFT ||
-        cmd == CMD_DOWN ||
-        cmd == CMD_UP ||
-        cmd == CMD_RIGHT) {
+    case CMD_LEFT:
+    case CMD_DOWN:
+    case CMD_UP:
+    case CMD_RIGHT:
         if (cmd == CMD_LEFT)
             mon->y--;
         else if (cmd == CMD_RIGHT)
@@ -63,6 +64,13 @@ mon_act(struct mon *mon)
             mon->y = 0;
         if (mon->y == ROOMSIZEY)
             mon->y--;
+        break;
+    case CMD_UNKNOWN:
+        pline("Unknown command!");
+        return ACT_FREE;
+    default:
+        pline("Unhandled case: %d", cmd);
+        return ACT_FREE;
     }
 
     return ACT_DONE;

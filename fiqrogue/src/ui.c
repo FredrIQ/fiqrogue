@@ -12,6 +12,7 @@ struct windows window;
 
 static void strarray_shift(char *[], int);
 static void ui_writemessage(const char *, bool);
+static void ui_resetmessages(void);
 
 /* Initialize the interface */
 void
@@ -47,6 +48,8 @@ ui_cmd(void)
         timeout_get_wch(1000, &key);
     } while (!key);
     switch (key) {
+    case '?':
+        return CMD_HELP;
     case 'h': case KEY_LEFT: case KEY_B1: /* B1/C2/A2/B3 are numpad 4/2/8/6 */
         return CMD_LEFT;
     case 'j': case KEY_DOWN: case KEY_C2:
@@ -63,7 +66,7 @@ ui_cmd(void)
         ui_reset(true);
         return CMD_NONE;
     }
-    return CMD_NONE; /* TODO: write "Unknown command" or similar somewhere */
+    return CMD_UNKNOWN;
 }
 
 /* Print out a message (in printf-format) on the screen */
@@ -100,6 +103,22 @@ strarray_shift(char *array[], int length)
 
     /* Free the last one */
     array[length-1] = NULL;
+}
+
+/* Called on resizes (and redraws), processes the message log for outputting
+   from scratch. */
+static void
+ui_resetmessages(void)
+{
+    /* Kill existing message buffers */
+    int i;
+    for (i = 0; i < NUM_MSGLINES; i++) {
+        free(window.msg[i]);
+        window.msg[i] = NULL;
+    }
+
+    for (i = 0; i < NUM_MESSAGES; i++)
+        ui_writemessage(gamestate.msg[i], false);
 }
 
 /* Add a message to the screen */
@@ -212,8 +231,10 @@ ui_reset(bool output_screen)
     x += h;
     window.level = newwin(ROOMSIZEX, ROOMSIZEY, x, y);
 
-    if (output_screen)
+    if (output_screen) {
+        ui_resetmessages();
         ui_refresh();
+    }
 }
 
 /* Refresh the UI */
