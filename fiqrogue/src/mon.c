@@ -31,8 +31,8 @@ mon_act(struct mon *mon)
 
     switch (cmd) {
     case CMD_HELP:
-        pline("Some quick help: h=Left, j=Down, k=Up, l=Right, ,=Pickup");
-        pline("::");
+        pline("Some quick help: h=Left, j=Down, k=Up, l=Right, ,=Pickup, "
+              "S=quit.");
         pline("You can also use the numpad or arrow keys to move.");
         return ACT_FREE;
     case CMD_QUIT:

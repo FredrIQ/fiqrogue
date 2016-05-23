@@ -31,6 +31,8 @@ game_init(void)
     /* Create a weapon */
     obj_new(OBJ_SWORD, 20, 20, true);
 
+    pline("Welcome to fiqrogue! Use hjkl, arrow keys or the numpad to move.");
+    pline("Press ? for help.");
     ui_refresh();
 }
 
