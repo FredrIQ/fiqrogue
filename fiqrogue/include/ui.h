@@ -16,6 +16,11 @@ enum cmd {
     CMD_NONE,
 };
 
+/* NUM_MSGLINES is the upper limit. In practice the limit can be smaller as a result of a
+   smaller game area. */
+# define NUM_MSGLINES 10
+# define NUM_MESSAGES 50
+
 /* winmenu is a simple linked list containing (sub)menus */
 struct winmenu {
     WINDOW *win;
@@ -25,15 +30,19 @@ struct winmenu {
 /* All game windows are stored in a struct windows named just "windows" */
 struct windows {
     WINDOW *root; /* stdscr */
-    WINDOW *msg; /* message area */
+    WINDOW *msgarea; /* message area */
     WINDOW *level; /* level area */
+    char *msg[NUM_MSGLINES]; /* message lines as they appear on the screen */
     struct winmenu *menu;
 };
 
 extern struct windows window;
 
+# define CUR_MSGLINES getmaxy(window.msgarea)
+
 extern void ui_init(void);
 enum cmd ui_cmd(void);
+extern void pline(const char *, ...);
 extern void ui_reset(bool);
 extern void ui_refresh(void);
 

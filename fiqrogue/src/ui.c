@@ -10,6 +10,9 @@
 
 struct windows window;
 
+static void strarray_shift(char *[], int);
+static void ui_writemessage(const char *, bool);
+
 /* Initialize the interface */
 void
 ui_init(void)
@@ -24,9 +27,18 @@ ui_init(void)
     set_faketerm_font_file("data/font.png");
     wrefresh(win);
     window.root = win;
+    int i;
+    for (i = 0; i < NUM_MSGLINES; i++)
+        window.msg[i] = NULL;
+
+    ui_reset(false);
 }
 
-/* Parses key input and returns in-game commands */
+/* Parses key input and returns in-game commands
+   TODO: This could use a second level of abstraction between this and mon_act, because
+   we want a way to handle purely interface-based commands, and commands that require
+   additional "parameters" (for example: eat item X). That way we also avoid returning
+   CMD_NONE to mon_act for resize events, something purely user-specific. */
 enum cmd
 ui_cmd(void)
 {
@@ -54,6 +66,106 @@ ui_cmd(void)
     return CMD_NONE; /* TODO: write "Unknown command" or similar somewhere */
 }
 
+/* Print out a message (in printf-format) on the screen */
+void
+pline(const char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+
+    strarray_shift(gamestate.msg, NUM_MESSAGES);
+
+    /* We want an appropriate buffer length for the message, so first just
+       check the length */
+    int len = vsnprintf(NULL, 0, format, args);
+    len++; /* vsnprintf return doesn't include the implied null */
+
+    gamestate.msg[NUM_MESSAGES-1] = malloc(len);
+    vsnprintf(gamestate.msg[NUM_MESSAGES-1], len, format, args);
+    va_end(args);
+
+    ui_writemessage(gamestate.msg[NUM_MESSAGES-1], true);
+}
+
+/* Shifts arrays of strings.
+   TODO: maybe an util.c for things like this? */
+static void
+strarray_shift(char *array[], int length)
+{
+    free(array[0]);
+
+    int i;
+    for (i = 1; i < length; i++)
+        array[i-1] = array[i];
+
+    /* Free the last one */
+    array[length-1] = NULL;
+}
+
+/* Add a message to the screen */
+static void
+ui_writemessage(const char *msg, bool update_window)
+{
+    if (!msg)
+        return;
+
+    int msglen = strlen(msg);
+    const char *winmsg = window.msg[NUM_MSGLINES-1];
+    int winlen = winmsg ? strlen(winmsg) : 0;
+    char buffer[msglen + 1];
+    strcpy(buffer, msg);
+    int offset = 0;
+
+    /* Check if we need to scroll, possibly several times */
+    while (winlen + msglen + 2 >= COLS) {
+        strarray_shift(window.msg, NUM_MSGLINES);
+        if (winlen) {
+            winlen = 0;
+            if (msglen < COLS)
+                break; /* Turns out merely scrolling the message area was enough */
+        }
+
+        unsigned breakpoint = COLS;
+        bool breakword = true; /* In case we need to skip over a char (the space) */
+        int i;
+        for (i = 0; i < COLS; i++) {
+            if (buffer[i + offset] == ' ') {
+                breakpoint = i + 1;
+                breakword = false;
+            }
+        }
+
+        /* Add part of the string to the message window and free up the now redundant
+           part of msg */
+        char *new = malloc(breakpoint);
+        strncpy(new, buffer + offset, breakpoint-1);
+        new[breakpoint-1] = '\0'; /* add null terminator */
+        window.msg[NUM_MSGLINES-1] = new;
+
+        offset += breakpoint;
+        if (breakword)
+            offset--; /* Don't skip over the breakpoint for word-break */
+        msglen -= offset;
+    }
+
+    /* If winlen is still set here, that means that no scroll was needed.
+       Add 2 spaces inbetween the messages */
+    if (winlen)
+        winlen += 2;
+
+    window.msg[NUM_MSGLINES-1] = realloc(window.msg[NUM_MSGLINES-1],
+                                         winlen + msglen + 1);
+    if (winlen) {
+        strcat(window.msg[NUM_MSGLINES-1], "  ");
+        strcat(window.msg[NUM_MSGLINES-1], buffer + offset);
+    } else
+        strcpy(window.msg[NUM_MSGLINES-1], buffer + offset);
+
+    if (update_window)
+        ui_refresh();
+    return;
+}
+
 /* Resets the interface, redoing (or possibly doing, this is also called on first run) all
    the windows from scratch. Called on window resizing.
    Setting output_screen to false allows one to avoid an implied ui_refresh, which
@@ -63,9 +175,9 @@ ui_reset(bool output_screen)
 {
     /* Kill existing windows */
     if (window.msg)
-        delwin(window.msg);
+        delwin(window.msgarea);
     if (window.level)
-        werase(window.level);
+        delwin(window.level);
     /* TODO
     if (window.menu)
     ui_killmenus(window.menu); */
@@ -86,16 +198,19 @@ ui_reset(bool output_screen)
     wclear(window.root); /* Blanks the window */
     wrefresh(window.root);
 
-    /* For now, the only thing that actually changes is height. */
-    int x = 0, y = 0, h = 0, w = 0;
+    /* For now, the only thing that actually changes on resize is height of different
+       areas, the width is always "the entire screen". */
+    int x = 0, y = 0, h = 0;
 
-    /* The message area uses up whatever space isn't taken by the level, capped at 10. */
+    /* Calculate message area height */
     h = LINES - ROOMSIZEX;
-    if (h > 10)
-        h = 10;
-    window.msg = subwin(window.root, h, w, x, y);
+    if (h > NUM_MSGLINES)
+        h = NUM_MSGLINES;
+    window.msgarea = newwin(h, COLS, x, y);
+
+    /* The game area, which is below the message area */
     x += h;
-    window.level = subwin(window.root, ROOMSIZEX, ROOMSIZEY, x, y);
+    window.level = newwin(ROOMSIZEX, ROOMSIZEY, x, y);
 
     if (output_screen)
         ui_refresh();
@@ -125,6 +240,20 @@ ui_refresh(void)
 
         mvwaddstr(window.level, mon->x, mon->y, mons[mon->typ].letter);
     }
+
+    /* Display messages */
+    werase(window.msgarea);
+    int i;
+    for (i = 0; i < NUM_MSGLINES; i++) {
+        if (NUM_MSGLINES - CUR_MSGLINES > i)
+            continue;
+
+        if (window.msg[i])
+            mvwaddstr(window.msgarea, i - (NUM_MSGLINES - CUR_MSGLINES),
+                      0, window.msg[i]);
+    }
+
     wmove(window.level, pmon.x, pmon.y);
+    wrefresh(window.msgarea);
     wrefresh(window.level);
 }

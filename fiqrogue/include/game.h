@@ -9,6 +9,7 @@
 struct gamestate {
     struct mon *monlist; /* monster list */
     struct obj *objlist; /* object list */
+    char *msg[NUM_MESSAGES]; /* message log */
 };
 
 extern struct gamestate gamestate;

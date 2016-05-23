@@ -19,9 +19,11 @@ enum act
 mon_act(struct mon *mon)
 {
     enum cmd cmd;
-    if (mon == &pmon)
+    if (mon == &pmon) {
+        /* Refresh the UI before input */
+        ui_refresh();
         cmd = ui_cmd();
-    else
+    } else
         cmd = (mon->y == 30 ? CMD_LEFT : CMD_RIGHT); /* dummy AI */
 
     if (cmd == CMD_NONE)
@@ -32,8 +34,10 @@ mon_act(struct mon *mon)
 
     if (cmd == CMD_PICKUP) {
         struct obj *obj = obj_at(mon->x, mon->y);
-        if (!obj)
+        if (!obj) {
+            pline("Nothing to pickup!");
             return ACT_FREE; /* nothing here, don't waste a turn */
+        }
 
         pickobj(mon, obj);
         return ACT_DONE;
