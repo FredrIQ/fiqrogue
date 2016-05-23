@@ -27,7 +27,7 @@ mon_act(struct mon *mon)
             cmd = ui_cmd();
         } while (cmd == CMD_NONE);
     } else
-        cmd = (mon->y == 30 ? CMD_LEFT : CMD_RIGHT); /* dummy AI */
+        cmd = (mon->x == 30 ? CMD_LEFT : CMD_RIGHT); /* dummy AI */
 
     switch (cmd) {
     case CMD_HELP:
@@ -51,13 +51,13 @@ mon_act(struct mon *mon)
     case CMD_UP:
     case CMD_RIGHT:
         if (cmd == CMD_LEFT)
-            mon->y--;
-        else if (cmd == CMD_RIGHT)
-            mon->y++;
-        else if (cmd == CMD_UP)
             mon->x--;
-        else if (cmd == CMD_DOWN)
+        else if (cmd == CMD_RIGHT)
             mon->x++;
+        else if (cmd == CMD_UP)
+            mon->y--;
+        else if (cmd == CMD_DOWN)
+            mon->y++;
         if (mon->x < 0)
             mon->x = 0;
         if (mon->x == ROOMSIZEX)

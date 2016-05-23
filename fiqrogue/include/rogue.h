@@ -11,8 +11,8 @@
 # include <stdlib.h>
 # include <string.h>
 
-# define ROOMSIZEX 20
-# define ROOMSIZEY 80
+# define ROOMSIZEX 80
+# define ROOMSIZEY 20
 # define MAXSTRING 64
 
 #endif /* ROGUE_H */

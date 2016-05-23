@@ -141,11 +141,11 @@ ui_writemessage(const char *msg, bool update_window)
         if (winlen) {
             winlen = 0;
             if (msglen < COLS)
-                break; /* Turns out merely scrolling the message area was enough */
+                break; /* Having its own line was enough to fit */
         }
 
         unsigned breakpoint = COLS;
-        bool breakword = true; /* In case we need to skip over a char (the space) */
+        bool breakword = true; /* In case we can't wrap on space */
         int i;
         for (i = 0; i < COLS; i++) {
             if (buffer[i + offset] == ' ') {
@@ -219,17 +219,17 @@ ui_reset(bool output_screen)
 
     /* For now, the only thing that actually changes on resize is height of different
        areas, the width is always "the entire screen". */
-    int x = 0, y = 0, h = 0;
+    int top = 0, height = 0;
 
     /* Calculate message area height */
-    h = LINES - ROOMSIZEX;
-    if (h > NUM_MSGLINES)
-        h = NUM_MSGLINES;
-    window.msgarea = newwin(h, COLS, x, y);
+    height = LINES - ROOMSIZEY;
+    if (height > NUM_MSGLINES)
+        height = NUM_MSGLINES;
+    window.msgarea = newwin(height, COLS, top, 0);
 
     /* The game area, which is below the message area */
-    x += h;
-    window.level = newwin(ROOMSIZEX, ROOMSIZEY, x, y);
+    top += height;
+    window.level = newwin(ROOMSIZEY, ROOMSIZEX, top, 0);
 
     if (output_screen) {
         ui_resetmessages();
@@ -245,12 +245,12 @@ ui_refresh(void)
     int x, y;
     for (x = 0; x < ROOMSIZEX; x++)
         for (y = 0; y < ROOMSIZEY; y++)
-            mvwaddstr(window.level, x, y, ".");
+            mvwaddstr(window.level, y, x, ".");
 
     /* Place the objects */
     struct obj *obj;
     for (obj = gamestate.objlist; obj; obj = obj->nobj)
-        mvwaddstr(window.level, obj->x, obj->y,
+        mvwaddstr(window.level, obj->y, obj->x,
                   objcats[objs[obj->typ].cat].letter);
 
     /* Place the monsters */
@@ -259,7 +259,7 @@ ui_refresh(void)
         if (mon_dead(mon))
             continue;
 
-        mvwaddstr(window.level, mon->x, mon->y, mons[mon->typ].letter);
+        mvwaddstr(window.level, mon->y, mon->x, mons[mon->typ].letter);
     }
 
     /* Display messages */
@@ -274,7 +274,7 @@ ui_refresh(void)
                       0, window.msg[i]);
     }
 
-    wmove(window.level, pmon.x, pmon.y);
+    wmove(window.level, pmon.y, pmon.x);
     wrefresh(window.msgarea);
     wrefresh(window.level);
 }
