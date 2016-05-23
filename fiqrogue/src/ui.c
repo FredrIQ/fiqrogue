@@ -73,6 +73,7 @@ ui_cmd(struct command *cmd)
         cmd->typ = CMD_PICKUP;
         break;
     case 'S': /* "save" (or for now, suicide!) */
+    case KEY_HANGUP:
         cmd->typ = CMD_QUIT;
         break;
     case KEY_RESIZE:

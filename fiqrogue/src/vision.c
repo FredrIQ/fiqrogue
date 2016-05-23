@@ -19,11 +19,12 @@ fov_recalc(void)
     fov_reset();
 
     int x, y;
+
     for (x = 0; x < ROOMSIZEX; x++) {
         for (y = 0; y < ROOMSIZEY; y++) {
             /* Only calculate edges */
-            if (x && x != ROOMSIZEX - 1 &&
-                y && y != ROOMSIZEY - 1)
+            if (x > 0 && x < ROOMSIZEX - 1 &&
+                y > 0 && y < ROOMSIZEY - 1)
                 continue;
 
             fov_recalc_line(x, y);
@@ -36,7 +37,8 @@ has_obstacle(int x, int y) {
     /* Add some arbitrary points to ensure that this works... */
     if ((x == 4 && y == 10) ||
         (x == 8 && y == 3) ||
-        (x == 24 && y == 18))
+        (x == 24 && y == 18) ||
+        (x == 30 && y < 15))
         return true;
     return false;
 }
@@ -50,11 +52,16 @@ fov_recalc_line(int x1, int y1)
     int dx = abs(x1 - x), sx = x < x1 ? 1 : -1;
     int dy = -abs(y1 - y), sy = y < y1 ? 1 : -1;
     int err = dx + dy, e2;
+    bool obstructed = false;
 
     while (true) {
-        gamestate.vismap[x][y] |= MAP_VISIBLE;
-        if (has_obstacle(x, y))
-            break;
+        if (!obstructed) {
+            gamestate.vismap[x][y] |= MAP_VISIBLE;
+            if (has_obstacle(x, y))
+                obstructed = true;
+        } else
+            gamestate.vismap[x][y] &= ~MAP_VISIBLE;
+
         if (x == x1 && y == y1)
             break;
 
