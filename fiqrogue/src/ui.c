@@ -413,6 +413,9 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
                 WACS_HLINE, WACS_HLINE,
                 WACS_ULCORNER, WACS_URCORNER,
                 WACS_LLCORNER, WACS_LRCORNER);
+
+    if (output_screen)
+        ui_refresh();
 }
 
 /* Deletes a menu. Implies deleting children. */
