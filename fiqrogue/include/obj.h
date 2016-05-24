@@ -10,6 +10,7 @@ struct obj {
     int x; /* x/y is not accurate if the object isn't on the floor */
     int y;
     enum objtyp typ;
+    char invlet; /* inventory letter */
     struct mon *carrier;
     struct obj *nobj;
 };

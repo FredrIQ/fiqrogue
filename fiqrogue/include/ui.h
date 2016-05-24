@@ -73,7 +73,7 @@ struct winmenu {
        if acquiring the choice that way is preferred for some reason, for
        consistency. */
     unsigned choicetable[NUM_MENULINES];
-    char *header;
+    char *header; /* Also the only line used in yesno/text menu types */
     char *input; /* for MEN_TEXT */
     char *line[NUM_MENULINES];
     struct winmenu *next;
@@ -95,6 +95,7 @@ extern void ui_init(void);
 extern void ui_cmd(struct command *);
 extern struct winmenu *uimenu_init(enum menutyp, enum menualign, enum menualign,
                                    int, int, const char *);
+extern void uimenu_delete(struct winmenu *, bool);
 extern void pline(const char *, ...);
 extern void ui_reset(bool);
 extern void ui_refresh(void);

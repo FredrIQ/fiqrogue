@@ -50,6 +50,11 @@ ui_cmd(struct command *cmd)
     do {
         timeout_get_wch(1000, &key);
     } while (!key);
+
+    /* Kill the game on hangup unconditionally for now */
+    if (key == KEY_HANGUP)
+        exit(EXIT_SUCCESS);
+
     switch (key) {
     case '?':
         cmd->typ = CMD_HELP;
@@ -74,7 +79,6 @@ ui_cmd(struct command *cmd)
         cmd->typ = CMD_PICKUP;
         break;
     case 'S': /* "save" (or for now, suicide!) */
-    case KEY_HANGUP:
         cmd->typ = CMD_QUIT;
         break;
     case KEY_RESIZE:
@@ -248,9 +252,9 @@ uimenu_init(enum menutyp typ, enum menualign alignx, enum menualign aligny,
     return menu;
 }
 
-/* Repositions a menu. Note that this only properly works for increasing the size.
-   Decreasing it will function, but introduce graphical errors, so if this is needed,
-   use ui_resetmenus(). */
+/* Populates a menu.
+   Note that if the needed height/width *decreased*, the UI should be reset to avoid
+   graphical glitches. */
 static void
 uimenu_populate(struct winmenu *menu, bool output_screen)
 {
@@ -353,26 +357,21 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
     /* Now we have the proper dimensions. Create the window and populate it. */
     menu->win = newwin(height, width, top, left);
 
-    int line = 0; /* which effective line to print out on */
-
-    if (menu->header) {
-        mvwaddstr(menu->win, line, 1, menu->header);
-        line++;
-    }
+    int line = 1; /* which effective line to print out on */
 
     int offset = 0;
     switch (menu->typ) {
-    case MEN_YESNO: /* Yes/no prompt only: draw the 1st line and " (y/n)" */
-        if (menu->line[0]) {
-            mvwaddstr(menu->win, line, 1, menu->line[0]);
-            offset += strlen(menu->line[0]) + 1;
+    case MEN_YESNO:
+        if (menu->header) {
+            mvwaddstr(menu->win, line, 1, menu->header);
+            offset += strlen(menu->header) + 1;
         }
 
         mvwaddstr(menu->win, line, offset + 1, "(y/n)");
         break;
-    case MEN_TEXT: /* Text prompt: also add the 1st line and an input area */
-        if (menu->line[0]) {
-            mvwaddstr(menu->win, line, 1, menu->line[0]);
+    case MEN_TEXT:
+        if (menu->header) {
+            mvwaddstr(menu->win, line, 1, menu->header);
             line++;
         }
         mvwaddstr(menu->win, line, 1, "[TODO: Implement input area]");
@@ -382,10 +381,21 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
     case MEN_ABCMANYCOUNT:
         offset += 4; /* Needs room for "a - " */
     case MEN_LIST:
+        if (menu->header) {
+            mvwaddstr(menu->win, line, 1, menu->header);
+            line++;
+        }
+
         for (i = (menu->scrollable ? menu->scrollpos : 0);
                   i < NUM_MENULINES; i++) {
-            if (!menu->line[i])
-                break; /* Out of lines to print */
+            /* Clear the line in case a message overflow, which can happen if the window
+               isn't wide enough. Since borders are drawn last, the potential of a text
+               overflowing to them isn't a problem, it'll be overwritten anyway. */
+            wmove(menu->win, line, 0);
+            wclrtobot(menu->win);
+
+            if (!menu->line[i] || lines == height)
+                break; /* Out of lines or area to print */
 
             mvwaddstr(menu->win, line, offset + 1, menu->line[i]);
             if (menu->typ != MEN_LIST) { /* It's a choice table, so add special stuff */
@@ -405,6 +415,7 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
                 if (menu->cursorpos == i)
                     mvwaddstr(menu->win, line, 4, ">");
             }
+            line++;
         }
         break;
     }
@@ -415,14 +426,31 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
                 WACS_LLCORNER, WACS_LRCORNER);
 
     if (output_screen)
-        ui_refresh();
+        wrefresh(menu->win);
 }
 
 /* Deletes a menu. Implies deleting children. */
 void
-uimenu_delete(void)
+uimenu_delete(struct winmenu *menu, bool output_screen)
 {
-    return; /* TODO */
+    for (; menu; menu = menunext) {
+        menunext = menu->next;
+        free(menu->header);
+        free(menu->input);
+        int i;
+        for (i = 0; i < NUM_MENULINES; i++)
+            free(menu->line[i]);
+
+        if (menu->win)
+            delwin(menu->win);
+
+        free(menu);
+    }
+
+    if (output_screen)
+        ui_refresh();
+
+    return;
 }
 
 /* Resets the interface, redoing (or possibly doing, this is also called on
