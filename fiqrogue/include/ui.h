@@ -96,7 +96,7 @@ extern void ui_cmd(struct command *);
 extern bool confirm(const char *);
 extern struct winmenu *uimenu_init(enum menutyp, enum menualign, enum menualign,
                                    int, int, const char *);
-extern bool uimenu_input(struct winmenu *, char *);
+extern bool uimenu_input(struct winmenu *, char *, bool);
 extern void uimenu_delete(struct winmenu *, bool);
 extern void pline(const char *, ...);
 extern void ui_reset(bool);

@@ -14,6 +14,7 @@ struct windows window;
 static void strarray_shift(char *[], int);
 static void ui_writemessage(const char *, bool);
 static void ui_resetmessages(void);
+static bool uimenu_input_inner(struct winmenu *, char *);
 static void uimenu_populate(struct winmenu *, bool);
 
 /* Initialize the interface */
@@ -215,7 +216,7 @@ confirm(const char *text)
     wrefresh(menu->win);
 
     char confirm;
-    if (uimenu_input(menu, &confirm))
+    if (uimenu_input(menu, &confirm, true))
         return (confirm == 'y' ? true : false);
 
     return false; /* user pressed escape */
@@ -268,8 +269,23 @@ uimenu_init(enum menutyp typ, enum menualign alignx, enum menualign aligny,
     return menu;
 }
 
+/* Menu input.
+   Returns true on completion or false if the user escaped the menu.
+   letter is a pointer to a character (not a string) and will hold the
+   user's response if it was a character based one ('y'/'n' for yes/no prompts,
+   the character choice for simple abc menus). For complex abc menus and for text
+   input, the choice will be part of the menu struct. */
 bool
-uimenu_input(struct winmenu *menu, char *letter)
+uimenu_input(struct winmenu *menu, char *letter, bool delete_on_completion)
+{
+    bool ret = uimenu_input_inner(menu, letter);
+    if (delete_on_completion)
+        uimenu_delete(menu, true);
+
+    return ret;
+}
+static bool
+uimenu_input_inner(struct winmenu *menu, char *letter)
 {
     unsigned key = 0;
     while (true) {
@@ -481,9 +497,25 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
 void
 uimenu_delete(struct winmenu *menu, bool output_screen)
 {
+    /* Iterate menus, but we want to set the previous menu pointer addr to NULL too which
+       slightly complicates the loop */
+    bool foundmenu = false;
+    struct winmenu *menutmp;
     struct winmenu *menunext;
-    for (; menu; menu = menunext) {
-        menunext = menu->next;
+    for (menutmp = window.menu; menutmp; menutmp = menunext) {
+        menunext = menutmp->next;
+        if (!foundmenu) {
+            if (menutmp == menu) { /* menu is window.menu */
+                window.menu = NULL;
+                foundmenu = true; /* no continue, since this is what we want to free */
+            } else if (menunext == menu) {
+                menutmp->next = NULL;
+                foundmenu = true;
+                continue;
+            } else
+                continue;
+        }
+
         free(menu->header);
         free(menu->input);
         int i;
