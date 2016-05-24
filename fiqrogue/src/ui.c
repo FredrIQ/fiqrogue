@@ -14,6 +14,7 @@ struct windows window;
 static void strarray_shift(char *[], int);
 static void ui_writemessage(const char *, bool);
 static void ui_resetmessages(void);
+static void uimenu_populate(struct winmenu *, bool);
 
 /* Initialize the interface */
 void
@@ -202,6 +203,225 @@ ui_writemessage(const char *msg, bool update_window)
     return;
 }
 
+/* Initializes a new menu. alignx/aligny are suggested alignment,
+   if top/left specifics are requested, use those in place of the aligns.
+   Returns the resulting winmenu unless an error occured in which NULL
+   is returned (Most likely top/left being out of bounds).
+   The defined top/left includes borders */
+struct winmenu *
+uimenu_init(enum menutyp typ, enum menualign alignx, enum menualign aligny,
+            int top, int left, const char *header)
+{
+    /* Technically top==0 and/or left==0 is valid, but so are ALIGN_LEFT, ALIGN_TOP which
+       does the same thing in a more straightforward way. */
+    if (top < 0 || top >= LINES || left < 0 || left >= COLS ||
+        (alignx != MAL_LEFT && alignx != MAL_RIGHT && alignx != MAL_CENTER &&
+         aligny != MAL_TOP && aligny != MAL_BOTTOM && aligny != MAL_CENTER))
+        return NULL; /* improper parameters */
+
+    struct winmenu *menu;
+    if (!window.menu) {
+        window.menu = malloc(sizeof (struct winmenu));
+        menu = window.menu;
+    } else {
+        /* Get the last entry in the list */
+        struct winmenu *next;
+        for (menu = window.menu; next; menu = next)
+            next = menu->next;
+
+        menu->next = malloc(sizeof (struct winmenu));
+        menu = menu->next;
+    }
+
+    menu->typ = typ;
+    menu->top = top;
+    menu->left = left;
+    menu->alignx = alignx;
+    menu->aligny = aligny;
+
+    int len = strlen(header);
+    menu->header = malloc(len + 1);
+    strcpy(menu->header, header);
+    menu->header[len-1] = '\0';
+
+    uimenu_populate(menu, false);
+    return menu;
+}
+
+/* Repositions a menu. Note that this only properly works for increasing the size.
+   Decreasing it will function, but introduce graphical errors, so if this is needed,
+   use ui_resetmenus(). */
+static void
+uimenu_populate(struct winmenu *menu, bool output_screen)
+{
+    /* Destroy existing window if applicable */
+    if (menu->win) {
+        werase(menu->win);
+        delwin(menu->win);
+        menu->win = NULL;
+    }
+
+    /* Figure out how large and wide the menu must be.
+       height is allowed to overflow (in which a scrollable area is used),
+       if width overflows, text will be cut off. */
+    int height = 0; /* Borders are added last */
+    int width = 0;
+
+    if (menu->typ == MEN_TEXT) {
+        height++; /* Prompt line */
+        width = MAXSTRING; /* Input string length */
+    }
+
+    if (menu->header) {
+        height++; /* Header line */
+        if (height < strlen(menu->header))
+            width = strlen(menu->header);
+    }
+
+    int i;
+    for (i = 0; i < NUM_MENULINES; i++) {
+        if (!menu->line[i])
+            break;
+        height++;
+
+        int len = strlen(menu->line[i]);
+        if (menu->typ == MEN_ABC ||
+            menu->typ == MEN_ABCMANY ||
+            menu->typ == MEN_ABCMANYCOUNT)
+            len += 4; /* Adds room for "a - " */
+        else if (menu->typ == MEN_YESNO)
+            len += 6; /* Adds room for " (y/n)" */
+        if (len > width)
+            width = len;
+    }
+
+    /* Add borders */
+    height += 2;
+    width += 2;
+
+    int top = menu->top;
+    int left = menu->left;
+
+    /* Figure out if corrections need to be made */
+    menu->scrollable = false;
+    if (!top) {
+        if (menu->aligny == MAL_TOP)
+            top = 0; /* essentially no-op, but is here to make it clear */
+        else if (menu->aligny == MAL_BOTTOM)
+            top = LINES - height;
+        else {
+            int centery = LINES / 2;
+            top = centery - (height / 2);
+        }
+
+        if (top < 0) { /* the menu ended up too large, use scroll */
+            top = 0;
+            menu->scrollable = true;
+        }
+    }
+
+    if (!left) {
+        if (menu->alignx == MAL_LEFT)
+            left = 0;
+        else if (menu->alignx == MAL_RIGHT)
+            left = COLS - width;
+        else {
+            int centerx = COLS / 2;
+            left = centerx - (width / 2);
+        }
+
+        if (left < 0)
+            left = 0;
+    }
+
+    if (top + height > LINES) {
+        if (height > LINES) {
+            height = LINES;
+            menu->scrollable = true;
+            top = 0;
+        } else
+            top = LINES - height;
+    }
+    if (left + width > COLS) {
+        if (width > LINES) {
+            width = LINES;
+            left = 0;
+        } else
+            left = COLS - width;
+    }
+
+    /* Now we have the proper dimensions. Create the window and populate it. */
+    menu->win = newwin(height, width, top, left);
+
+    int line = 0; /* which effective line to print out on */
+
+    if (menu->header) {
+        mvwaddstr(menu->win, line, 1, menu->header);
+        line++;
+    }
+
+    int offset = 0;
+    switch (menu->typ) {
+    case MEN_YESNO: /* Yes/no prompt only: draw the 1st line and " (y/n)" */
+        if (menu->line[0]) {
+            mvwaddstr(menu->win, line, 1, menu->line[0]);
+            offset += strlen(menu->line[0]) + 1;
+        }
+
+        mvwaddstr(menu->win, line, offset + 1, "(y/n)");
+        break;
+    case MEN_TEXT: /* Text prompt: also add the 1st line and an input area */
+        if (menu->line[0]) {
+            mvwaddstr(menu->win, line, 1, menu->line[0]);
+            line++;
+        }
+        mvwaddstr(menu->win, line, 1, "[TODO: Implement input area]");
+        break;
+    case MEN_ABC:
+    case MEN_ABCMANY:
+    case MEN_ABCMANYCOUNT:
+        offset += 4; /* Needs room for "a - " */
+    case MEN_LIST:
+        for (i = (menu->scrollable ? menu->scrollpos : 0);
+                  i < NUM_MENULINES; i++) {
+            if (!menu->line[i])
+                break; /* Out of lines to print */
+
+            mvwaddstr(menu->win, line, offset + 1, menu->line[i]);
+            if (menu->typ != MEN_LIST) { /* It's a choice table, so add special stuff */
+                char letter[2];
+                letter[0] = menu->lettermap[i];
+                letter[1] = '\0';
+                mvwaddstr(menu->win, line, 1, letter);
+
+                const char *choicesym = "-";
+                if ((menu->choicetable[i] & MENUCHOICE_MARKED)) {
+                    choicesym = "+";
+                    /* Use # to mark numbered choices */
+                    if ((menu->choicetable[i] & ~MENUCHOICE_MARKED))
+                        choicesym = "#";
+                }
+                mvwaddstr(menu->win, line, 3, choicesym);
+                if (menu->cursorpos == i)
+                    mvwaddstr(menu->win, line, 4, ">");
+            }
+        }
+        break;
+    }
+
+    wborder_set(menu->win, WACS_VLINE, WACS_VLINE,
+                WACS_HLINE, WACS_HLINE,
+                WACS_ULCORNER, WACS_URCORNER,
+                WACS_LLCORNER, WACS_LRCORNER);
+}
+
+/* Deletes a menu. Implies deleting children. */
+void
+uimenu_delete(void)
+{
+    return; /* TODO */
+}
+
 /* Resets the interface, redoing (or possibly doing, this is also called on
    first run) all the windows from scratch. Called on window resizing.
    Setting output_screen to false allows one to avoid an implied ui_refresh,
@@ -246,6 +466,7 @@ ui_reset(bool output_screen)
     window.level = newwin(ROOMSIZEY, ROOMSIZEX, top, 0);
 
     if (output_screen) {
+        //ui_resetmenus();
         ui_resetmessages();
         ui_refresh();
     }

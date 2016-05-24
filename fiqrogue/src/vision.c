@@ -38,7 +38,7 @@ has_obstacle(int x, int y) {
     if ((x == 4 && y == 10) ||
         (x == 8 && y == 3) ||
         (x == 24 && y == 18) ||
-        (x == 30 && y < 15))
+        (x == 40 && y < 15))
         return true;
     return false;
 }
@@ -59,7 +59,7 @@ fov_recalc_line(int x1, int y1)
             gamestate.vismap[x][y] |= MAP_VISIBLE;
             if (has_obstacle(x, y))
                 obstructed = true;
-        } else
+        } else if (!has_obstacle(x, y))
             gamestate.vismap[x][y] &= ~MAP_VISIBLE;
 
         if (x == x1 && y == y1)
