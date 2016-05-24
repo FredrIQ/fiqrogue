@@ -101,8 +101,10 @@ mon_act(struct mon *mon)
 
     if (mon == &pmon) {
         /* Refresh the UI before input */
-        ui_refresh();
-        ui_cmd(&cmd);
+        do {
+            ui_refresh();
+            ui_cmd(&cmd);
+        } while (cmd.typ == CMD_NONE);
     } else {
         cmd.typ = CMD_MOVE;
         cmd.dx = (mon->x == 10 ? -1 : 1); /* dummy AI */

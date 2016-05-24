@@ -79,7 +79,7 @@ ui_cmd(struct command *cmd)
         cmd->typ = CMD_PICKUP;
         break;
     case 'S': /* "save" (or for now, suicide!) */
-        cmd->typ = CMD_QUIT;
+        cmd->typ = confirm("Are you sure?") ? CMD_QUIT : CMD_NONE;
         break;
     case KEY_RESIZE:
         ui_reset(true);
@@ -207,6 +207,20 @@ ui_writemessage(const char *msg, bool update_window)
     return;
 }
 
+bool
+confirm(const char *text)
+{
+    struct winmenu *menu;
+    menu = uimenu_init(MEN_YESNO, MAL_CENTER, MAL_CENTER, 3, 0, text);
+    wrefresh(menu->win);
+
+    char confirm;
+    if (uimenu_input(menu, &confirm))
+        return (confirm == 'y' ? true : false);
+
+    return false; /* user pressed escape */
+}
+
 /* Initializes a new menu. alignx/aligny are suggested alignment,
    if top/left specifics are requested, use those in place of the aligns.
    Returns the resulting winmenu unless an error occured in which NULL
@@ -252,6 +266,31 @@ uimenu_init(enum menutyp typ, enum menualign alignx, enum menualign aligny,
     return menu;
 }
 
+bool
+uimenu_input(struct winmenu *menu, char *letter)
+{
+    unsigned key = 0;
+    while (true) {
+        timeout_get_wch(-1, &key);
+        if (key == KEY_HANGUP)
+            exit(EXIT_SUCCESS);
+
+        if (key == KEY_ESCAPE)
+            return false;
+
+        switch (menu->typ) {
+        case MEN_YESNO:
+            if (key == 'y' || key == 'n') {
+                *letter = key;
+                return true;
+            }
+            break;
+        default:
+            break;
+        }
+    }
+}
+
 /* Populates a menu.
    Note that if the needed height/width *decreased*, the UI should be reset to avoid
    graphical glitches. */
@@ -270,6 +309,7 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
        if width overflows, text will be cut off. */
     int height = 0; /* Borders are added last */
     int width = 0;
+    int len = 0;
 
     if (menu->typ == MEN_TEXT) {
         height++; /* Prompt line */
@@ -278,8 +318,11 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
 
     if (menu->header) {
         height++; /* Header line */
-        if (height < strlen(menu->header))
-            width = strlen(menu->header);
+        len = strlen(menu->header);
+        if (menu->typ == MEN_YESNO)
+            len += 8; /* Adds room for " (y/n)  " */
+        if (width < len)
+            width = len;
     }
 
     int i;
@@ -288,13 +331,11 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
             break;
         height++;
 
-        int len = strlen(menu->line[i]);
+        len = strlen(menu->line[i]);
         if (menu->typ == MEN_ABC ||
             menu->typ == MEN_ABCMANY ||
             menu->typ == MEN_ABCMANYCOUNT)
             len += 4; /* Adds room for "a - " */
-        else if (menu->typ == MEN_YESNO)
-            len += 6; /* Adds room for " (y/n)" */
         if (len > width)
             width = len;
     }
@@ -367,7 +408,7 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
             offset += strlen(menu->header) + 1;
         }
 
-        mvwaddstr(menu->win, line, offset + 1, "(y/n)");
+        mvwaddstr(menu->win, line, offset + 1, "(y/n) ");
         break;
     case MEN_TEXT:
         if (menu->header) {
@@ -394,7 +435,7 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
             wmove(menu->win, line, 0);
             wclrtobot(menu->win);
 
-            if (!menu->line[i] || lines == height)
+            if (!menu->line[i] || line == height)
                 break; /* Out of lines or area to print */
 
             mvwaddstr(menu->win, line, offset + 1, menu->line[i]);
@@ -425,14 +466,17 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
                 WACS_ULCORNER, WACS_URCORNER,
                 WACS_LLCORNER, WACS_LRCORNER);
 
-    if (output_screen)
+    if (output_screen) {
+        wmove(menu->win, height, width);
         wrefresh(menu->win);
+    }
 }
 
 /* Deletes a menu. Implies deleting children. */
 void
 uimenu_delete(struct winmenu *menu, bool output_screen)
 {
+    struct winmenu *menunext;
     for (; menu; menu = menunext) {
         menunext = menu->next;
         free(menu->header);
