@@ -251,6 +251,7 @@ uimenu_init(enum menutyp typ, enum menualign alignx, enum menualign aligny,
         menu = menu->next;
     }
 
+    memset(menu, 0, sizeof (struct winmenu));
     menu->typ = typ;
     menu->top = top;
     menu->left = left;
@@ -258,7 +259,8 @@ uimenu_init(enum menutyp typ, enum menualign alignx, enum menualign aligny,
     menu->aligny = aligny;
 
     int len = strlen(header);
-    menu->header = malloc(len + 1);
+    len++;
+    menu->header = malloc(len);
     strcpy(menu->header, header);
     menu->header[len-1] = '\0';
 
@@ -297,6 +299,9 @@ uimenu_input(struct winmenu *menu, char *letter)
 static void
 uimenu_populate(struct winmenu *menu, bool output_screen)
 {
+    if (!menu)
+        return;
+
     /* Destroy existing window if applicable */
     if (menu->win) {
         werase(menu->win);
