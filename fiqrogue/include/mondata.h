@@ -16,8 +16,8 @@ enum montyp {
 };
 
 struct mondata {
-    char name[MAXSTRING];
-    char letter[2];
+    char *name;
+    char *letter;
 };
 
 static const struct mondata mons[] = {

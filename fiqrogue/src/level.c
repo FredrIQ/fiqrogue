@@ -11,14 +11,13 @@ level_init(int z)
 {
     struct level *level = malloc(sizeof (struct level));
     memset(level, 0, sizeof (struct level));
-
     int x, y;
-    for (x = 0; x < ROOMSIZEX; x++) {
-        for (y = 0; y < ROOMSIZEY; y++) {
-            level->prop[x][y] |= MAP_FLOOR;
-            level->prop[x][y] |= MAP_LIT;
-        }
-    }
+
+    /* Make all of the level solid */
+    for (x = 0; x < ROOMSIZEX; x++)
+        for (y = 0; y < ROOMSIZEY; y++)
+            level->prop[x][y] |= MAP_ROCK;
+
     level->z = z;
 
     int i;

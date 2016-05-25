@@ -103,8 +103,11 @@ pline(const char *format, ...)
 
     /* We want an appropriate buffer length for the message, so first just
        check the length */
-    int len = vsnprintf(NULL, 0, format, args);
+    va_list copy;
+    va_copy(copy, args);
+    int len = vsnprintf(NULL, 0, format, copy);
     len++; /* vsnprintf return doesn't include the implied null */
+    va_end(copy);
 
     gamestate.msg[NUM_MESSAGES-1] = malloc(len);
     vsnprintf(gamestate.msg[NUM_MESSAGES-1], len, format, args);

@@ -3,6 +3,7 @@
 #include "game.h"
 #include "mon.h"
 #include "obj.h"
+#include "random.h"
 #include "rogue.h"
 #include "ui.h"
 

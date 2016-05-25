@@ -3,6 +3,7 @@
 #include "game.h"
 #include "mon.h"
 #include "obj.h"
+#include "random.h"
 #include "rogue.h"
 #include "ui.h"
 
@@ -16,6 +17,7 @@ void
 game_init(void)
 {
     ui_init();
+    rnd_init();
     struct level *level = level_init(1);
 
     /* We want to assign a proper monster struct to the player, but mon_new()
@@ -23,9 +25,10 @@ game_init(void)
        Store this result in mon_tmp so we can free it properly */
     struct mon *mon_tmp = mon_new(NULL, MON_PLAYER, 10, 10);
     pmon = *mon_tmp;
+    free(mon_tmp); /* now get rid of it */
+
     pmon.level = level;
     monlist_add(pmon.level, &pmon);
-    free(mon_tmp); /* now get rid of it */
 
     /* Create another monster */
     mon_new(pmon.level, MON_JACKAL, 10, 10);
@@ -48,6 +51,10 @@ game_loop(void)
     enum act act;
 
     while (!mon_dead(&pmon)) {
+        /* Currently, a monster can't cause another one to switch monlist
+           chain (change dungeon level), so this approach works. If this
+           is changed later, we need a new method of iterating the
+           monlist. */
         for (mon = pmon.level->monlist; mon; mon = nmon) {
             nmon = mon->nmon;
             if (mon_dead(mon)) {
@@ -70,7 +77,9 @@ game_loop(void)
             case ACT_DONE:
                 break;
             default:
-                break; /* TODO: error handling */
+                pline("Unknown monster action result: %d",
+                      act);
+                break;
             }
         }
 

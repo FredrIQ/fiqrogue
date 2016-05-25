@@ -11,7 +11,7 @@
 # define NUM_LEVELS 127
 
 /* An important thing to consider: the T-shaped wall borders are inconsistently named in
-   uncursed (probably resulting from ncurses) -- T and _|_ are top/bottom, but 
+   uncursed (probably resulting from ncurses) -- T and _|_ are top/bottom, but
    |-/-| is right/left. This inconsistency is kept here to avoid even more confusion.
    XWALL is tiles supposed to be walls but that hasn't gone through wallification.
    (XTWALL is just the + linedrawing character) */
