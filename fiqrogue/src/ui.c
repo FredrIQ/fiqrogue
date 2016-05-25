@@ -80,8 +80,12 @@ ui_cmd(struct command *cmd)
     case ',':
         cmd->typ = CMD_PICKUP;
         break;
+    case '.': case 's':
+        cmd->typ = CMD_REST;
+        break;
     case 'S': /* "save" (or for now, suicide!) */
-        cmd->typ = confirm("Are you sure?") ? CMD_QUIT : CMD_NONE;
+        cmd->typ = (confirm("Are you sure you want to quit?") ?
+                    CMD_QUIT : CMD_NONE);
         break;
     case KEY_RESIZE:
         ui_reset(true);
@@ -454,9 +458,10 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
 
         for (i = (menu->scrollable ? menu->scrollpos : 0);
                   i < NUM_MENULINES; i++) {
-            /* Clear the line in case a message overflow, which can happen if the window
-               isn't wide enough. Since borders are drawn last, the potential of a text
-               overflowing to them isn't a problem, it'll be overwritten anyway. */
+            /* Clear the line in case a message overflow, which can happen if
+               the window isn't wide enough. Since borders are drawn last, the
+               potential of a text overflowing to them isn't a problem, it'll
+               be overwritten anyway. */
             wmove(menu->win, line, 0);
             wclrtobot(menu->win);
 
@@ -464,7 +469,8 @@ uimenu_populate(struct winmenu *menu, bool output_screen)
                 break; /* Out of lines or area to print */
 
             mvwaddstr(menu->win, line, offset + 1, menu->line[i]);
-            if (menu->typ != MEN_LIST) { /* It's a choice table, so add special stuff */
+            if (menu->typ != MEN_LIST) {
+                /* It's a choice table, so add special stuff */
                 char letter[2];
                 letter[0] = menu->lettermap[i];
                 letter[1] = '\0';
@@ -598,20 +604,28 @@ ui_refresh(void)
     /* Display a playfield */
     werase(window.level);
 
-    int x, y;
+    int x, y, maptype;
     for (x = 0; x < ROOMSIZEX; x++) {
         for (y = 0; y < ROOMSIZEY; y++) {
-            if ((level->prop[x][y] & MAP_VISIBLE))
+            if ((level->prop[x][y] & MAP_EXPLORED)) {
+                maptype = (level->prop[x][y] & MAP_TYPEMASK);
                 mvwaddstr(window.level, y, x,
-                          has_obstacle(x, y) ? "#" : ".");
+                          maptype <= MAP_LAST_WALL ? "#" :
+                          maptype <= MAP_ROCK ? "#" :
+                          maptype == MAP_FLOOR ? "." :
+                          maptype == MAP_CORRIDOR ? "." :
+                          "?");
+            }
         }
     }
 
     /* Place the objects */
     struct obj *obj;
-    for (obj = level->objlist; obj; obj = obj->nobj)
-        mvwaddstr(window.level, obj->y, obj->x,
-                  objcats[objs[obj->typ].cat].letter);
+    for (obj = level->objlist; obj; obj = obj->nobj) {
+        if ((level->prop[obj->x][obj->y] & MAP_EXPLORED))
+            mvwaddstr(window.level, obj->y, obj->x,
+                      objcats[objs[obj->typ].cat].letter);
+    }
 
     /* Place the monsters */
     struct mon *mon;
@@ -619,7 +633,8 @@ ui_refresh(void)
         if (mon_dead(mon))
             continue;
 
-        mvwaddstr(window.level, mon->y, mon->x, mons[mon->typ].letter);
+        if ((level->prop[mon->x][mon->y] & MAP_VISIBLE))
+            mvwaddstr(window.level, mon->y, mon->x, mons[mon->typ].letter);
     }
 
     /* Display messages */

@@ -12,6 +12,8 @@ enum montyp {
     MON_NONE,
     MON_PLAYER,
     MON_JACKAL,
+    MON_CAT,
+    MON_RHINO,
     LAST_MON = MON_JACKAL,
 };
 
@@ -24,6 +26,8 @@ static const struct mondata mons[] = {
     {"dummy", " "},
     {"player", "@"},
     {"jackal", "j"},
+    {"cat", "c"},
+    {"rhino", "r"},
 };
 
 #endif /* MONDATA_H */

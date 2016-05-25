@@ -23,15 +23,15 @@ game_init(void)
     /* We want to assign a proper monster struct to the player, but mon_new()
        will malloc additional memory which we don't care about in this case.
        Store this result in mon_tmp so we can free it properly */
-    struct mon *mon_tmp = mon_new(NULL, MON_PLAYER, 10, 10);
+    struct mon *mon_tmp = mon_new(level, MON_PLAYER, ROOMSIZEX, ROOMSIZEY);
     pmon = *mon_tmp;
-    free(mon_tmp); /* now get rid of it */
+    mon_free(mon_tmp); /* now get rid of it */
 
     pmon.level = level;
     monlist_add(pmon.level, &pmon);
 
     /* Create another monster */
-    mon_new(pmon.level, MON_JACKAL, 10, 10);
+    mon_new(pmon.level, MON_JACKAL, ROOMSIZEX, ROOMSIZEY);
 
     /* Create a weapon */
     struct obj *obj = obj_new(OBJ_SWORD, 20, 20);
@@ -51,6 +51,18 @@ game_loop(void)
     enum act act;
 
     while (!mon_dead(&pmon)) {
+        /* Create a new monster sometimes */
+        if (!rn2(10)) {
+            enum montyp mtyp = MON_JACKAL;
+            if (!rn2(2)) {
+                mtyp = MON_CAT;
+                if (!rn2(2))
+                    mtyp = MON_RHINO;
+            }
+
+            mon_new(pmon.level, mtyp, ROOMSIZEX, ROOMSIZEY);
+        }
+
         /* Currently, a monster can't cause another one to switch monlist
            chain (change dungeon level), so this approach works. If this
            is changed later, we need a new method of iterating the
@@ -65,7 +77,8 @@ game_loop(void)
             /* ACT_FREE is a free action, so continue until
                an action that takes time is performed */
             act = ACT_FREE;
-            while (act == ACT_FREE)
+            while (act == ACT_FREE ||
+                   (mon->typ == MON_RHINO && rn2(2)))
                 act = mon_act(mon);
 
             switch (act) {

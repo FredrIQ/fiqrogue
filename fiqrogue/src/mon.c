@@ -6,6 +6,7 @@
 #include "random.h"
 #include "rogue.h"
 #include "ui.h"
+#include "vision.h"
 
 /* Monster handling */
 
@@ -28,10 +29,13 @@ mon_new(struct level *level, enum montyp typ, int x, int y)
 {
     struct mon *mon = malloc(sizeof (struct mon));
     memset(mon, 0, sizeof (struct mon));
-    if (x >= ROOMSIZEX)
-        x = ROOMSIZEX - 1;
-    if (y >= ROOMSIZEY)
-        y = ROOMSIZEY - 1;
+    if (x >= ROOMSIZEX || y >= ROOMSIZEY) {
+        /* Find a nonsolid place to place the monster */
+        do {
+            x = rn2(ROOMSIZEX);
+            y = rn2(ROOMSIZEY);
+        } while (has_obstacle(level, x, y));
+    }
 
     mon->x = x;
     mon->y = y;
@@ -111,7 +115,35 @@ mon_act(struct mon *mon)
         } while (cmd.typ == CMD_NONE);
     } else {
         cmd.typ = CMD_MOVE;
-        cmd.dx = (mon->x == 10 ? -1 : 1); /* dummy AI */
+        if (mon->x < pmon.x &&
+            !has_obstacle(mon->level, mon->x + 1, mon->y))
+            cmd.dx = 1;
+        else if (mon->x > pmon.x &&
+                 !has_obstacle(mon->level, mon->x - 1, mon->y))
+            cmd.dx = -1;
+        if (mon->y < pmon.y &&
+                 !has_obstacle(mon->level, mon->x, mon->y + 1))
+            cmd.dy = 1;
+        else if (mon->x > pmon.y &&
+                 !has_obstacle(mon->level, mon->x, mon->y - 1))
+            cmd.dy = -1;
+
+        if (mon->typ != MON_CAT &&
+            mon->typ != MON_RHINO &&
+            cmd.dx && cmd.dy) {
+            if (rn2(2))
+                cmd.dx = 0;
+            else
+                cmd.dy = 0;
+        }
+        if (!rn2(10)) {
+            cmd.dx = 0;
+            cmd.dy = 0;
+            if (rn2(2))
+                cmd.dx = (rn2(2) ? 1 : -1);
+            else
+                cmd.dy = (rn2(2) ? 1 : -1);
+        }
     }
 
     switch (cmd.typ) {
@@ -120,6 +152,8 @@ mon_act(struct mon *mon)
               "S=quit.");
         pline("You can also use the numpad or arrow keys to move.");
         return ACT_FREE;
+    case CMD_REST:
+        return ACT_DONE;
     case CMD_QUIT:
         return ACT_DIED;
     case CMD_PICKUP:
@@ -132,8 +166,7 @@ mon_act(struct mon *mon)
         pickobj(mon, obj);
         return ACT_DONE;
     case CMD_MOVE:
-        mon_move(mon, &cmd);
-        return ACT_DONE;
+        return (mon_move(mon, &cmd) ? ACT_DONE : ACT_FREE);
     case CMD_UNKNOWN:
         pline("Unknown command!");
         return ACT_FREE;
@@ -175,16 +208,28 @@ mon_move(struct mon *mon, struct command *cmd)
     x += cmd->dx;
     y += cmd->dy;
 
-    if (x < 0 || x >= ROOMSIZEX || y < 0 || y >= ROOMSIZEY) {
+    if (x < 0 || x >= ROOMSIZEX || y < 0 || y >= ROOMSIZEY ||
+        has_obstacle(mon->level, x, y)) {
         if (you)
             pline("That's a wall.");
         return false;
     }
 
-    if (mon_at(mon->level, x, y)) {
-        if (you)
-            pline("Sorry, you can't fight stuff yet.");
-        return false;
+    struct mon *mdef = mon_at(mon->level, x, y);
+    bool udef = (mdef == &pmon);
+    if (mdef) {
+        mdef->dead = 1;
+        pline("%s%s kill%s %s%s!", you ? "" : "The ",
+              you ? "You" : mons[mon->typ].name,
+              you ? "" : "s", mon == mdef || udef ? "" : "the ",
+              mon == mdef ? "itself" :
+              udef ? "you" : mons[mdef->typ].name);
+        if (mdef == &pmon) {
+            pline("You die... Press any key to exit.");
+            unsigned dummy;
+            timeout_get_wch(-1, &dummy);
+        }
+        return true;
     }
 
     mon->x = x;

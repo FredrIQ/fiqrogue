@@ -3,9 +3,10 @@
 #ifndef VISION_H
 # define VISION_H
 
+# include "level.h"
 # include "rogue.h"
 
 extern void fov_recalc(void);
-extern bool has_obstacle(int, int);
+extern bool has_obstacle(struct level *, int, int);
 
 #endif /* VISION_H */

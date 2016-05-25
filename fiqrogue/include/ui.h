@@ -9,6 +9,7 @@
 enum cmd {
     CMD_HELP,
     CMD_MOVE,
+    CMD_REST,
     CMD_PICKUP,
     CMD_QUIT,
     CMD_UNKNOWN,
