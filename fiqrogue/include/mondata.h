@@ -14,7 +14,7 @@ enum montyp {
     MON_JACKAL,
     MON_CAT,
     MON_RHINO,
-    LAST_MON = MON_JACKAL,
+    LAST_MON = MON_RHINO,
 };
 
 struct mondata {
