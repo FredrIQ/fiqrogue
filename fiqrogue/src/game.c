@@ -16,20 +16,23 @@ void
 game_init(void)
 {
     ui_init();
+    struct level *level = level_init(1);
 
     /* We want to assign a proper monster struct to the player, but mon_new()
        will malloc additional memory which we don't care about in this case.
        Store this result in mon_tmp so we can free it properly */
-    struct mon *mon_tmp = mon_new(MON_PLAYER, 10, 10, false);
+    struct mon *mon_tmp = mon_new(NULL, MON_PLAYER, 10, 10);
     pmon = *mon_tmp;
-    monlist_add(&pmon);
+    pmon.level = level;
+    monlist_add(pmon.level, &pmon);
     free(mon_tmp); /* now get rid of it */
 
     /* Create another monster */
-    mon_new(MON_JACKAL, 10, 10, true);
+    mon_new(pmon.level, MON_JACKAL, 10, 10);
 
     /* Create a weapon */
-    obj_new(OBJ_SWORD, 20, 20, true);
+    struct obj *obj = obj_new(OBJ_SWORD, 20, 20);
+    objlist_add(&pmon.level->objlist, obj);
 
     pline("Welcome to fiqrogue! Use hjkl, arrow keys or the numpad to move.");
     pline("Press ? for help.");
@@ -45,7 +48,7 @@ game_loop(void)
     enum act act;
 
     while (!mon_dead(&pmon)) {
-        for (mon = gamestate.monlist; mon; mon = nmon) {
+        for (mon = pmon.level->monlist; mon; mon = nmon) {
             nmon = mon->nmon;
             if (mon_dead(mon)) {
                 mon_free(mon);

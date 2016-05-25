@@ -1,6 +1,7 @@
 /* vim:set cin ft=c sw=4 sts=4 ts=8 et ai cino=Ls\:0t0(0 : -*- mode:c;fill-column:80;tab-width:8;c-basic-offset:4;indent-tabs-mode:nil;c-file-style:"k&r" -*-*/
 
 #include "game.h"
+#include "level.h"
 #include "mon.h"
 #include "obj.h"
 #include "rogue.h"
@@ -589,6 +590,7 @@ void
 ui_refresh(void)
 {
     fov_recalc();
+    struct level *level = pmon.level;
 
     /* Display a playfield */
     werase(window.level);
@@ -596,7 +598,7 @@ ui_refresh(void)
     int x, y;
     for (x = 0; x < ROOMSIZEX; x++) {
         for (y = 0; y < ROOMSIZEY; y++) {
-            if ((gamestate.vismap[x][y] & MAP_VISIBLE))
+            if ((level->prop[x][y] & MAP_VISIBLE))
                 mvwaddstr(window.level, y, x,
                           has_obstacle(x, y) ? "#" : ".");
         }
@@ -604,13 +606,13 @@ ui_refresh(void)
 
     /* Place the objects */
     struct obj *obj;
-    for (obj = gamestate.objlist; obj; obj = obj->nobj)
+    for (obj = level->objlist; obj; obj = obj->nobj)
         mvwaddstr(window.level, obj->y, obj->x,
                   objcats[objs[obj->typ].cat].letter);
 
     /* Place the monsters */
     struct mon *mon;
-    for (mon = gamestate.monlist; mon; mon = mon->nmon) {
+    for (mon = level->monlist; mon; mon = mon->nmon) {
         if (mon_dead(mon))
             continue;
 

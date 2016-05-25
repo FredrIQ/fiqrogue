@@ -1,6 +1,7 @@
 /* vim:set cin ft=c sw=4 sts=4 ts=8 et ai cino=Ls\:0t0(0 : -*- mode:c;fill-column:80;tab-width:8;c-basic-offset:4;indent-tabs-mode:nil;c-file-style:"k&r" -*-*/
 
 #include "game.h"
+#include "level.h"
 #include "rogue.h"
 #include "vision.h"
 
@@ -47,6 +48,7 @@ has_obstacle(int x, int y) {
 static void
 fov_recalc_line(int x1, int y1)
 {
+    struct level *level = pmon.level;
     int x = pmon.x;
     int y = pmon.y;
     int dx = abs(x1 - x), sx = x < x1 ? 1 : -1;
@@ -56,11 +58,11 @@ fov_recalc_line(int x1, int y1)
 
     while (true) {
         if (!obstructed) {
-            gamestate.vismap[x][y] |= MAP_VISIBLE;
+            level->prop[x][y] |= MAP_VISIBLE;
             if (has_obstacle(x, y))
                 obstructed = true;
         } else if (!has_obstacle(x, y))
-            gamestate.vismap[x][y] &= ~MAP_VISIBLE;
+            level->prop[x][y] &= ~MAP_VISIBLE;
 
         if (x == x1 && y == y1)
             break;
@@ -81,8 +83,9 @@ fov_recalc_line(int x1, int y1)
 static void
 fov_reset(void)
 {
+    struct level *level = pmon.level;
     int x, y;
     for (x = 0; x < ROOMSIZEX; x++)
         for (y = 0; y < ROOMSIZEY; y++)
-            gamestate.vismap[x][y] &= ~MAP_VISIBLE;
+            level->prop[x][y] &= ~MAP_VISIBLE;
 }

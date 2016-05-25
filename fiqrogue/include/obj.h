@@ -16,11 +16,10 @@ struct obj {
 };
 
 extern void pickobj(struct mon *, struct obj *);
-extern struct obj *obj_at(int, int);
+extern struct obj *obj_at(struct level *, int, int);
 extern void obj_free(struct obj *);
-extern struct obj *obj_new(enum objtyp, int, int, bool);
-extern bool objlist_addlevel(struct obj *);
+extern struct obj *obj_new(enum objtyp, int, int);
 extern bool objlist_add(struct obj **, struct obj *);
-extern bool objlist_free(struct obj *);
+extern bool objlist_free(struct obj **, struct obj *);
 
 #endif /* OBJ_H */

@@ -20,9 +20,10 @@ mon_free(struct mon *mon)
     free(mon);
 }
 
-/* Create a new monster */
+/* Create a new monster. level is which level to add the monster to, or NULL to not
+   add it anywhere. */
 struct mon *
-mon_new(enum montyp typ, int x, int y, bool add_to_monlist)
+mon_new(struct level *level, enum montyp typ, int x, int y)
 {
     struct mon *mon = malloc(sizeof (struct mon));
     memset(mon, 0, sizeof (struct mon));
@@ -36,28 +37,29 @@ mon_new(enum montyp typ, int x, int y, bool add_to_monlist)
     if (typ > LAST_MON)
         typ = LAST_MON;
     mon->typ = typ;
+    mon->level = level;
 
     /* Add to the monster list */
-    if (add_to_monlist)
-        monlist_add(mon);
+    if (level)
+        monlist_add(level, mon);
     return mon;
 }
 
 /* Add a monster to the list */
 bool
-monlist_add(struct mon *mon)
+monlist_add(struct level *level, struct mon *mon)
 {
     if (!mon)
         return false; /* shouldn't happen */
 
     struct mon *mtmp;
-    for (mtmp = gamestate.monlist; mtmp; mtmp = mtmp->nmon) {
+    for (mtmp = level->monlist; mtmp; mtmp = mtmp->nmon) {
         if (mon == mtmp)
             return false; /* already in the list */
     }
 
-    mon->nmon = gamestate.monlist;
-    gamestate.monlist = mon;
+    mon->nmon = level->monlist;
+    level->monlist = mon;
     return true;
 }
 
@@ -68,9 +70,10 @@ monlist_free(struct mon *mon)
     if (!mon)
         return false; /* oops? */
 
+    struct level *level = mon->level;
     struct mon *prevmon = NULL;
     struct mon *listmon = NULL;
-    for (listmon = gamestate.monlist; listmon; listmon = listmon->nmon) {
+    for (listmon = level->monlist; listmon; listmon = listmon->nmon) {
         if (mon != listmon) {
             prevmon = listmon;
             continue;
@@ -79,7 +82,7 @@ monlist_free(struct mon *mon)
         if (prevmon)
             prevmon->nmon = listmon->nmon;
         else /* listmon is gamestate.monlist */
-            gamestate.monlist = listmon->nmon;
+            level->monlist = listmon->nmon;
         return true; /* we're done here */
     }
     return false; /* not in the list */
@@ -119,7 +122,7 @@ mon_act(struct mon *mon)
     case CMD_QUIT:
         return ACT_DIED;
     case CMD_PICKUP:
-        obj = obj_at(mon->x, mon->y);
+        obj = obj_at(mon->level, mon->x, mon->y);
         if (!obj) {
             pline("Nothing to pickup!");
             return ACT_FREE; /* nothing here, don't waste a turn */
@@ -144,10 +147,10 @@ mon_act(struct mon *mon)
 /* Returns the monster at the given location, or NULL if there's nothing
    there */
 struct mon *
-mon_at(int x, int y)
+mon_at(struct level *level, int x, int y)
 {
     struct mon *mon;
-    for (mon = gamestate.monlist; mon; mon = mon->nmon)
+    for (mon = level->monlist; mon; mon = mon->nmon)
     {
         if (mon->dead)
             continue;
@@ -177,7 +180,7 @@ mon_move(struct mon *mon, struct command *cmd)
         return false;
     }
 
-    if (mon_at(x, y)) {
+    if (mon_at(mon->level, x, y)) {
         if (you)
             pline("Sorry, you can't fight stuff yet.");
         return false;

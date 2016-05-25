@@ -17,10 +17,10 @@ pickobj(struct mon *mon, struct obj *obj)
 
 /* Returns the object at the given location, if any */
 struct obj *
-obj_at(int x, int y)
+obj_at(struct level *level, int x, int y)
 {
     struct obj *obj;
-    for (obj = gamestate.objlist; obj; obj = obj->nobj) {
+    for (obj = level->objlist; obj; obj = obj->nobj) {
         if (obj->x == x && obj->y == y)
             return obj;
     }
@@ -33,13 +33,13 @@ obj_free(struct obj *obj)
 {
     if (!obj)
         return;
-    objlist_free(obj);
+
     free(obj);
 }
 
 /* Create an object */
 struct obj *
-obj_new(enum objtyp typ, int x, int y, bool add_to_objlist)
+obj_new(enum objtyp typ, int x, int y)
 {
     struct obj *obj = malloc(sizeof (struct obj));
     memset(obj, 0, sizeof (struct obj));
@@ -54,20 +54,10 @@ obj_new(enum objtyp typ, int x, int y, bool add_to_objlist)
         typ = LAST_OBJ;
     obj->typ = typ;
 
-    /* Add to the object list */
-    if (add_to_objlist)
-        objlist_addlevel(obj);
     return obj;
 }
 
-/* Add an object to the main list */
-bool
-objlist_addlevel(struct obj *obj)
-{
-    return objlist_add(&gamestate.objlist, obj);
-}
-
-/* Add an object to a list. Implies freeing it from elsewhere */
+/* Add an object to a list. */
 bool
 objlist_add(struct obj **chain, struct obj *obj)
 {
@@ -80,9 +70,6 @@ objlist_add(struct obj **chain, struct obj *obj)
             return false; /* already in the list */
     }
 
-    /* Free it from a potential other list */
-    objlist_free(obj);
-
     obj->nobj = *chain;
     *chain = obj;
     return true;
@@ -90,14 +77,10 @@ objlist_add(struct obj **chain, struct obj *obj)
 
 /* Frees an object from the chain it is in */
 bool
-objlist_free(struct obj *obj)
+objlist_free(struct obj **chain, struct obj *obj)
 {
     if (!obj)
         return false; /* oops? */
-
-    struct obj **chain = &gamestate.objlist;
-    if (obj->carrier)
-        chain = &obj->carrier->invent;
 
     struct obj *prevobj = NULL;
     struct obj *listobj = NULL;

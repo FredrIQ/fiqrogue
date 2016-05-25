@@ -5,10 +5,7 @@
 
 # include "rogue.h"
 
-# define MAP_LIT 1
-# define MAP_VISIBLE 2
-
 extern void fov_recalc(void);
 extern bool has_obstacle(int, int);
 
-#endif
+#endif /* VISION_H */

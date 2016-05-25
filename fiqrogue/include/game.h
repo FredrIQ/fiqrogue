@@ -3,13 +3,11 @@
 #ifndef GAME_H
 # define GAME_H
 
-# include "mon.h"
+# include "level.h"
 # include "ui.h"
 
 struct gamestate {
-    struct mon *monlist; /* monster list */
-    struct obj *objlist; /* object list */
-    unsigned vismap[ROOMSIZEX][ROOMSIZEY];
+    struct level *levels[NUM_LEVELS];
     char *msg[NUM_MESSAGES]; /* message log */
 };
 
