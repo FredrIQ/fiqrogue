@@ -19,7 +19,10 @@ mon_free(struct mon *mon)
     if (!mon)
         return;
     monlist_free(mon);
-    free(mon);
+    if (mon == &pmon) {
+        pline("Trying to free the player monst???");
+    } else
+        free(mon);
 }
 
 /* Create a new monster. level is which level to add the monster to, or NULL to not
@@ -43,6 +46,7 @@ mon_new(struct level *level, enum montyp typ, int x, int y)
         typ = LAST_MON;
     mon->typ = typ;
     mon->level = level;
+    mon->hp = 1;
 
     /* Add to the monster list */
     if (level)
@@ -121,10 +125,11 @@ mon_act(struct mon *mon)
         else if (mon->x > pmon.x &&
                  !has_obstacle(mon->level, mon->x - 1, mon->y))
             cmd.dx = -1;
+
         if (mon->y < pmon.y &&
                  !has_obstacle(mon->level, mon->x, mon->y + 1))
             cmd.dy = 1;
-        else if (mon->x > pmon.y &&
+        else if (mon->y > pmon.y &&
                  !has_obstacle(mon->level, mon->x, mon->y - 1))
             cmd.dy = -1;
 
@@ -136,7 +141,7 @@ mon_act(struct mon *mon)
             else
                 cmd.dy = 0;
         }
-        if (!rn2(10)) {
+        if (!rn2(20)) {
             cmd.dx = 0;
             cmd.dy = 0;
             if (rn2(2))
@@ -148,9 +153,10 @@ mon_act(struct mon *mon)
 
     switch (cmd.typ) {
     case CMD_HELP:
-        pline("Some quick help: h=Left, j=Down, k=Up, l=Right, ,=Pickup, "
-              "S=quit.");
-        pline("You can also use the numpad or arrow keys to move.");
+        pline("Some quick help: h=Left, j=Down, k=Up, l=Right, "
+              ",=Pickup, S=quit, .=rest.");
+        pline("You can also use the numpad or arrow keys to move "
+              "and s to rest.");
         return ACT_FREE;
     case CMD_REST:
         return ACT_DONE;
@@ -218,14 +224,30 @@ mon_move(struct mon *mon, struct command *cmd)
     struct mon *mdef = mon_at(mon->level, x, y);
     bool udef = (mdef == &pmon);
     if (mdef) {
+        if (--mdef->hp) {
+            pline("%s%s hit%s %s%s.",
+                  you ? "" : "The ",
+                  you ? "You" : mons[mon->typ].name,
+                  you ? "" : "s", mon == mdef || udef ? "" : "the ",
+                  mon == mdef ? "itself" :
+                  udef ? "you" : mons[mdef->typ].name);
+            return true;
+        }
+
         mdef->dead = 1;
-        pline("%s%s kill%s %s%s!", you ? "" : "The ",
+        mon->kills++;
+        pline("%s%s kill%s %s%s who had %d kill%s!",
+              you ? "" : "The ",
               you ? "You" : mons[mon->typ].name,
               you ? "" : "s", mon == mdef || udef ? "" : "the ",
               mon == mdef ? "itself" :
-              udef ? "you" : mons[mdef->typ].name);
+              udef ? "you" : mons[mdef->typ].name,
+              mdef->kills, mdef->kills == 1 ? "" : "s");
         if (mdef == &pmon) {
-            pline("You die... Press any key to exit.");
+            pline("You die...");
+            pline("You killed %d monster%s!",
+                  mdef->kills, mdef->kills == 1 ? "" : "s");
+            pline("Press any key to exit.");
             unsigned dummy;
             timeout_get_wch(-1, &dummy);
         }

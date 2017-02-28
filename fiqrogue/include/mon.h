@@ -15,6 +15,8 @@ enum act {
 struct mon {
     int x;
     int y;
+    int kills;
+    int hp;
     bool dead;
     enum montyp typ;
     struct obj *invent; /* inventory */

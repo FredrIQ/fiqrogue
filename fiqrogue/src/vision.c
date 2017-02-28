@@ -20,8 +20,10 @@ fov_recalc(void)
 {
     fov_reset();
 
-    int x, y;
+    struct level *level = pmon.level;
+    int x, y, x1, y1;
 
+    /* Do initial shadowcasting */
     for (x = 0; x < ROOMSIZEX; x++) {
         for (y = 0; y < ROOMSIZEY; y++) {
             /* Only calculate edges */
@@ -33,11 +35,33 @@ fov_recalc(void)
         }
     }
 
+    /* Visible open area highlights obstructions next to it */
+    for (x = 0; x < ROOMSIZEX; x++) {
+        for (y = 0; y < ROOMSIZEY; y++) {
+            if ((level->prop[x][y] & MAP_VISIBLE) &&
+                !has_obstacle(level, x, y)) {
+                for (x1 = x - 1; x1 <= x + 1; x1++) {
+                    for (y1 = y - 1; y1 <= y + 1; y1++) {
+                        /* Not diagonals */
+                        if (x != x1 && y != y1)
+                            continue;
+
+                        if (x1 >= 0 && x1 < ROOMSIZEX &&
+                            y1 >= 0 && y1 < ROOMSIZEY &&
+                            has_obstacle(level, x1, y1))
+                            level->prop[x1][y1] |= MAP_VISIBLE;
+                    }
+                }
+            }
+        }
+    }
+
     fov_mark_explored();
 }
 
 bool
-has_obstacle(struct level *level, int x, int y) {
+has_obstacle(struct level *level, int x, int y)
+{
     if ((level->prop[x][y] & MAP_TYPEMASK) <= MAP_LAST_SOLID)
         return true;
     return false;
@@ -60,8 +84,7 @@ fov_recalc_line(int x1, int y1)
             level->prop[x][y] |= MAP_VISIBLE;
             if (has_obstacle(level, x, y))
                 obstructed = true;
-        } else if (!has_obstacle(level, x, y))
-            level->prop[x][y] &= ~MAP_VISIBLE;
+        }
 
         if (x == x1 && y == y1)
             break;

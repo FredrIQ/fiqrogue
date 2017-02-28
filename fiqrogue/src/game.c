@@ -25,6 +25,7 @@ game_init(void)
        Store this result in mon_tmp so we can free it properly */
     struct mon *mon_tmp = mon_new(level, MON_PLAYER, ROOMSIZEX, ROOMSIZEY);
     pmon = *mon_tmp;
+    pmon.hp = 2;
     mon_free(mon_tmp); /* now get rid of it */
 
     pmon.level = level;
